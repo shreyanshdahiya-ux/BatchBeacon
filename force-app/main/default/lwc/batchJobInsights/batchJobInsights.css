@@ -1,0 +1,150 @@
+.dashboard-card {
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    /* Fixed equal height for both columns; the row list flex-fills the remainder. */
+    height: 18rem;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header circular avatars */
+.hdr-avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 2rem;
+}
+
+.avatar-fail {
+    background: #ea001e;
+}
+
+.avatar-slow {
+    background: #b78103;
+}
+
+.count-pill {
+    display: inline-block;
+    min-width: 1.4rem;
+    text-align: center;
+    background: #ea001e;
+    color: #fff;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 0 0.4rem;
+    margin-right: 0.25rem;
+}
+
+.col-head {
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.35rem;
+}
+
+/* Scrollable row list — flex-fills the card so both cards stay equal height */
+.rows-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.list-row {
+    min-height: 1.85rem;
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+}
+
+.rank-num {
+    display: inline-block;
+    width: 1.1rem;
+    color: #969492;
+    font-weight: 700;
+    margin-right: 0.4rem;
+}
+
+/* Progress bars */
+.custom-progress-bar {
+    width: 100%;
+    height: 0.9rem;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.bg-fail-light {
+    background-color: #efeae2;
+}
+
+.bg-fail-dark {
+    background: linear-gradient(90deg, #6b5b86, #564563);
+}
+
+.bg-slow-light {
+    background-color: #f7eed7;
+}
+
+.bg-slow-dark {
+    background: linear-gradient(90deg, #d98a0b, #b76a00);
+}
+
+/* Badges & utilities */
+.rate-badge {
+    display: inline-block;
+    background: #f3f3f3;
+    color: #514f4d;
+    border-radius: 10px;
+    padding: 0.1rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.text-muted {
+    color: #706e6b;
+}
+
+.text-uppercase {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.font-semibold {
+    font-weight: 600;
+}
+
+/* Avg run time micro-chart */
+.trend-chart-container {
+    border-radius: 6px;
+    border: 1px solid #e5e5e5;
+    background: #fbfaf7;
+    padding: 0.25rem 0.5rem;
+    min-width: 8.5rem;
+}
+
+.avg-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #b76a00;
+    margin-right: 0.4rem;
+}
+
+.sparkline {
+    width: 4.5rem;
+    height: 1.6rem;
+}
+
+.empty-state {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #706e6b;
+    padding: 0.75rem 0.1rem;
+}

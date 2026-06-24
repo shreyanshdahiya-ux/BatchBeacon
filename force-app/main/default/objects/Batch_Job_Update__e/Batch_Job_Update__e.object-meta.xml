@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Lightweight push notification published once per scheduled tracker run. Dashboard subscribes via empApi.</description>
+    <eventType>HighVolume</eventType>
+    <label>Batch Job Update</label>
+    <pluralLabel>Batch Job Updates</pluralLabel>
+    <publishBehavior>PublishAfterCommit</publishBehavior>
+</CustomObject>

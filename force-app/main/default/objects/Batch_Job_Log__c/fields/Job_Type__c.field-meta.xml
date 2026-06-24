@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Job_Type__c</fullName>
+    <label>Job Type</label>
+    <type>Picklist</type>
+    <required>false</required>
+    <valueSet>
+        <restricted>false</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>BatchApex</fullName>
+                <default>true</default>
+                <label>BatchApex</label>
+            </value>
+            <value>
+                <fullName>Queueable</fullName>
+                <default>false</default>
+                <label>Queueable</label>
+            </value>
+            <value>
+                <fullName>Future</fullName>
+                <default>false</default>
+                <label>Future</label>
+            </value>
+            <value>
+                <fullName>ScheduledApex</fullName>
+                <default>false</default>
+                <label>ScheduledApex</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

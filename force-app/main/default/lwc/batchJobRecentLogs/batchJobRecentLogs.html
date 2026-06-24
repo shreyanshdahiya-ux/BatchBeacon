@@ -1,0 +1,104 @@
+<template>
+    <lightning-card icon-name="standard:log_a_call">
+        <span slot="title" class="slds-grid slds-grid_vertical-align-center">
+            <span class="slds-m-right_x-small">Recent Batch Job Logs</span>
+            <lightning-helptext content="Most recent batch job executions. Filter by type (pills) and status, select rows to bulk-abort running jobs, and use the row menu to View details, Abort a running job, or Re-run a completed batch/queueable."></lightning-helptext>
+        </span>
+        <div slot="actions" class="slds-grid slds-gutters_xx-small">
+            <div class="slds-col">
+                <lightning-combobox
+                    name="status"
+                    label="Status"
+                    variant="label-hidden"
+                    value={selectedStatus}
+                    options={statusOptions}
+                    onchange={handleStatusChange}
+                ></lightning-combobox>
+            </div>
+            <div class="slds-col">
+                <lightning-combobox
+                    name="limit"
+                    label="Show"
+                    variant="label-hidden"
+                    value={limitN}
+                    options={limitOptions}
+                    onchange={handleLimitChange}
+                ></lightning-combobox>
+            </div>
+        </div>
+
+        <!-- Toolbar: type filter pills + bulk actions -->
+        <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-wrap slds-p-horizontal_small slds-p-bottom_x-small toolbar">
+            <div class="slds-grid slds-wrap pill-row">
+                <template for:each={pills} for:item="pill">
+                    <lightning-button
+                        key={pill.value}
+                        label={pill.label}
+                        variant={pill.variant}
+                        data-value={pill.value}
+                        onclick={handlePillClick}
+                        class="slds-m-right_xx-small slds-m-bottom_xx-small"
+                    ></lightning-button>
+                </template>
+            </div>
+            <div class="slds-grid slds-grid_vertical-align-center">
+                <lightning-button
+                    label={abortSelectedLabel}
+                    icon-name="utility:close"
+                    variant="destructive"
+                    disabled={abortSelectedDisabled}
+                    onclick={handleAbortSelected}
+                    class="slds-m-right_x-small"
+                ></lightning-button>
+                <lightning-button
+                    label="Abort all running"
+                    icon-name="utility:stop"
+                    variant="destructive-text"
+                    disabled={abortAllDisabled}
+                    onclick={handleAbortAllRunning}
+                ></lightning-button>
+            </div>
+        </div>
+
+        <div class="slds-p-horizontal_small slds-p-bottom_small">
+            <template lwc:if={loading}>
+                <div class="slds-is-relative slds-p-vertical_x-large">
+                    <lightning-spinner alternative-text="Loading logs" size="small"></lightning-spinner>
+                </div>
+            </template>
+
+            <template lwc:elseif={error}>
+                <div class="slds-text-color_error slds-p-around_medium slds-text-align_center">
+                    <lightning-icon icon-name="utility:error" variant="error" size="x-small"></lightning-icon>
+                    Unable to load recent logs.
+                </div>
+            </template>
+
+            <template lwc:elseif={hasRows}>
+                <div class="logs-scroll">
+                    <c-beacon-datatable
+                        key-field="Id"
+                        data={rows}
+                        columns={columns}
+                        onrowaction={handleRowAction}
+                        onrowselection={handleRowSelection}
+                        resize-column-disabled
+                        min-column-width="70"
+                    ></c-beacon-datatable>
+                </div>
+            </template>
+
+            <template lwc:else>
+                <div class="slds-text-align_center slds-text-color_weak slds-p-around_large">
+                    <lightning-icon icon-name="standard:log_a_call" size="small" class="slds-m-bottom_x-small"></lightning-icon>
+                    <p>No batch job logs match this filter.</p>
+                </div>
+            </template>
+        </div>
+
+        <p slot="footer" class="slds-text-body_small slds-text-color_weak">
+            <lightning-icon icon-name="utility:list" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+            {rowCountLabel}
+        </p>
+    </lightning-card>
+</template>

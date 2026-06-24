@@ -1,0 +1,61 @@
+<template>
+    <lightning-card icon-name="utility:chart">
+        <span slot="title" class="slds-grid slds-grid_vertical-align-center">
+            <span class="slds-m-right_x-small">Daily Batch Job Trend</span>
+            <lightning-helptext content="Daily batch-job volume over the lookback window, stacked by Completed, Failed/Aborted and In Progress. Hover a bar for the per-status breakdown and total; use the dropdown to change the range."></lightning-helptext>
+        </span>
+        <div slot="actions">
+            <lightning-combobox
+                name="lookback"
+                label="Lookback"
+                variant="label-hidden"
+                value={lookbackDays}
+                options={lookbackOptions}
+                onchange={handleLookbackChange}
+            ></lightning-combobox>
+        </div>
+
+        <!-- Stats strip -->
+        <div class="slds-grid slds-grid_align-spread slds-p-horizontal_small slds-p-bottom_xx-small stats-strip">
+            <div class="slds-text-align_center">
+                <div class="stat-value">{totalJobs}</div>
+                <div class="stat-label">Total</div>
+            </div>
+            <div class="slds-text-align_center">
+                <div class="stat-value">{avgPerDay}</div>
+                <div class="stat-label">Avg / day</div>
+            </div>
+            <div class="slds-text-align_center">
+                <div class="stat-value">{peakCount}</div>
+                <div class="stat-label">Peak · {peakDay}</div>
+            </div>
+        </div>
+
+        <div class="slds-p-horizontal_small slds-p-bottom_small">
+            <template lwc:if={loading}>
+                <div class="slds-is-relative chart-state">
+                    <lightning-spinner alternative-text="Loading chart" size="small"></lightning-spinner>
+                </div>
+            </template>
+
+            <template lwc:if={error}>
+                <div class="slds-text-color_error slds-p-around_small slds-text-align_center">
+                    <lightning-icon icon-name="utility:error" variant="error" size="x-small"></lightning-icon>
+                    Unable to load chart data.
+                </div>
+            </template>
+
+            <!-- Empty state (only once loaded and no error) -->
+            <template lwc:if={showEmpty}>
+                <div class="chart-state slds-text-align_center slds-text-color_weak">
+                    <lightning-icon icon-name="utility:chart" size="small" class="slds-m-bottom_x-small"></lightning-icon>
+                    <p>No batch jobs in this window yet.</p>
+                </div>
+            </template>
+
+            <div class={chartWrapperClass}>
+                <canvas class="trend" lwc:dom="manual"></canvas>
+            </div>
+        </div>
+    </lightning-card>
+</template>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Run_Count__c</fullName>
+    <label>Run Count</label>
+    <description>Total executions of this class on this date.</description>
+    <type>Number</type>
+    <precision>10</precision>
+    <scale>0</scale>
+    <required>false</required>
+</CustomField>

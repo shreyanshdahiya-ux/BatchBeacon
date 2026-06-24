@@ -1,0 +1,64 @@
+<template>
+    <div class="monitor-shell">
+        <!-- Header bar -->
+        <div class="slds-grid slds-grid_vertical-align-center slds-grid_align-spread slds-p-vertical_x-small slds-p-horizontal_small monitor-header">
+            <div class="slds-grid slds-grid_vertical-align-center">
+                <lightning-icon icon-name="utility:pulse" size="x-small" class="slds-m-right_x-small header-icon"></lightning-icon>
+                <h1 class="slds-text-heading_small slds-text-color_inverse">Batch Beacon · Batch Job Monitor</h1>
+            </div>
+            <div class="slds-grid slds-grid_vertical-align-center">
+                <span class="header-sub slds-m-right_small">{lastEventLabel}</span>
+                <span class={statusClass}>
+                    <span class="live-dot"></span>{statusLabel}
+                </span>
+                <lightning-button
+                    label="Sync now"
+                    icon-name="utility:sync"
+                    variant="brand"
+                    class="slds-m-left_x-small"
+                    onclick={handleSyncNow}
+                    disabled={syncing}
+                ></lightning-button>
+                <lightning-button-icon
+                    icon-name="utility:refresh"
+                    variant="border-filled"
+                    alternative-text="Refresh now"
+                    title="Refresh now"
+                    class={refreshIconClass}
+                    disabled={refreshing}
+                    onclick={handleManualRefresh}
+                ></lightning-button-icon>
+            </div>
+        </div>
+
+        <!-- Health banner -->
+        <div class={bannerClass}>
+            <div class="slds-grid slds-grid_vertical-align-center">
+                <lightning-icon icon-name={bannerIcon} variant={bannerIconVariant} size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                <span class="banner-text">{bannerText}</span>
+            </div>
+            <template lwc:if={hasFailures}>
+                <lightning-button label="View failures" variant="destructive-text" onclick={handleViewFailures}></lightning-button>
+            </template>
+        </div>
+
+        <!-- Dashboard grid -->
+        <div class="slds-grid slds-wrap slds-gutters_x-small">
+            <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3">
+                <c-batch-job-summary-tile refreshtick={refreshTick}></c-batch-job-summary-tile>
+            </div>
+            <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-3">
+                <c-batch-job-trend-chart refreshtick={refreshTick}></c-batch-job-trend-chart>
+            </div>
+            <div class="slds-col slds-size_1-of-1 slds-p-top_x-small">
+                <c-batch-job-insights refreshtick={refreshTick}></c-batch-job-insights>
+            </div>
+            <div class="slds-col slds-size_1-of-1 slds-p-top_x-small">
+                <c-batch-job-detail-table refreshtick={refreshTick}></c-batch-job-detail-table>
+            </div>
+            <div class="slds-col slds-size_1-of-1 slds-p-top_x-small">
+                <c-batch-job-recent-logs refreshtick={refreshTick}></c-batch-job-recent-logs>
+            </div>
+        </div>
+    </div>
+</template>

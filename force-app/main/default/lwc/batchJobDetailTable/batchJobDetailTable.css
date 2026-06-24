@@ -1,0 +1,9 @@
+.table-scroll {
+    max-height: 14rem;
+    overflow-y: auto;
+    /* Attempt to tighten row height via SLDS styling hooks. */
+    --slds-c-table-cell-spacing-block-start: 0.125rem;
+    --slds-c-table-cell-spacing-block-end: 0.125rem;
+    --slds-c-table-cell-spacing-inline-start: 0.5rem;
+    --slds-c-table-cell-spacing-inline-end: 0.5rem;
+}

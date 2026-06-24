@@ -1,0 +1,121 @@
+/* Headline KPIs */
+.kpi-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding: 0.5rem 0 0.75rem;
+}
+
+.kpi-block {
+    flex: 1 1 0;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.kpi-rate-block {
+    border-left: 1px solid #e5e5e5;
+    padding-left: 0.75rem;
+}
+
+.kpi-total {
+    font-size: 2.4rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #032d60;
+}
+
+.kpi-rate {
+    font-size: 2.4rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.rate-healthy {
+    color: #2e844a;
+}
+
+.rate-warning {
+    color: #a86403;
+}
+
+.rate-critical {
+    color: #ba0517;
+}
+
+.kpi-cap {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #706e6b;
+    margin-top: 0.3rem;
+}
+
+/* Success-rate bar */
+.rate-bar {
+    height: 0.35rem;
+    background: #eef1f6;
+    border-radius: 0.2rem;
+    overflow: hidden;
+    margin: 0.4rem 0.25rem 0;
+}
+
+.rate-fill {
+    height: 100%;
+    border-radius: 0.2rem;
+    transition: width 0.3s ease;
+}
+
+.fill-healthy {
+    background: linear-gradient(90deg, #45c65a, #2e844a);
+}
+
+.fill-warning {
+    background: linear-gradient(90deg, #fbbf24, #a86403);
+}
+
+.fill-critical {
+    background: linear-gradient(90deg, #fb7185, #ba0517);
+}
+
+/* Status stat tiles */
+.stat-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+    border-top: 1px solid #e5e5e5;
+    padding-top: 0.75rem;
+}
+
+.stat-tile {
+    background: #f8f9fb;
+    border: 1px solid #e9ecf2;
+    border-radius: 0.4rem;
+    padding: 0.5rem 0.25rem;
+    text-align: center;
+}
+
+.stat-num {
+    font-size: 1.4rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-top: 0.15rem;
+}
+
+.num-success {
+    color: #2e844a;
+}
+
+.num-fail {
+    color: #ba0517;
+}
+
+.num-progress {
+    color: #a86403;
+}
+
+.stat-cap {
+    font-size: 0.7rem;
+    color: #706e6b;
+}

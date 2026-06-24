@@ -1,0 +1,72 @@
+<template>
+    <lightning-card icon-name="standard:job_profile">
+        <span slot="title" class="slds-grid slds-grid_vertical-align-center">
+            <span class="slds-m-right_x-small">Per-Job Run Counts</span>
+            <lightning-helptext content="Per-class run totals for the selected date: runs, success, failures, in-progress, success rate and average duration. Use the date picker and class search, and click a column header to sort."></lightning-helptext>
+        </span>
+        <div slot="actions" class="slds-grid slds-grid_vertical-align-center slds-gutters_x-small">
+            <div class="slds-col">
+                <lightning-input
+                    type="search"
+                    label="Search class"
+                    variant="label-hidden"
+                    placeholder="Filter by class…"
+                    value={searchTerm}
+                    onchange={handleSearch}
+                ></lightning-input>
+            </div>
+            <div class="slds-col">
+                <lightning-input
+                    type="date"
+                    label="Date"
+                    variant="label-hidden"
+                    value={selectedDate}
+                    onchange={handleDateChange}
+                ></lightning-input>
+            </div>
+        </div>
+
+        <div class="slds-p-horizontal_small slds-p-bottom_small">
+            <template lwc:if={loading}>
+                <div class="slds-is-relative slds-p-vertical_x-large">
+                    <lightning-spinner alternative-text="Loading table" size="small"></lightning-spinner>
+                </div>
+            </template>
+
+            <template lwc:elseif={error}>
+                <div class="slds-text-color_error slds-p-around_medium slds-text-align_center">
+                    <lightning-icon icon-name="utility:error" variant="error" size="x-small"></lightning-icon>
+                    Unable to load run counts.
+                </div>
+            </template>
+
+            <template lwc:elseif={hasRows}>
+                <div class="table-scroll">
+                    <c-beacon-datatable
+                        key-field="Id"
+                        data={rows}
+                        columns={columns}
+                        sorted-by={sortedBy}
+                        sorted-direction={sortDirection}
+                        onsort={handleSort}
+                        hide-checkbox-column
+                        resize-column-disabled
+                        min-column-width="80"
+                    ></c-beacon-datatable>
+                </div>
+            </template>
+
+            <template lwc:else>
+                <div class="slds-text-align_center slds-text-color_weak slds-p-around_large">
+                    <lightning-icon icon-name="standard:job_profile" size="small" class="slds-m-bottom_x-small"></lightning-icon>
+                    <p>No batch jobs recorded for the selected date.</p>
+                </div>
+            </template>
+        </div>
+
+        <p slot="footer" class="slds-text-body_small slds-text-color_weak">
+            <lightning-icon icon-name="utility:summary" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+            {summaryLabel}
+        </p>
+    </lightning-card>
+</template>

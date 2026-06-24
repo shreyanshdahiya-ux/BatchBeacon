@@ -1,0 +1,86 @@
+<template>
+    <lightning-modal-header label="Job Detail"></lightning-modal-header>
+
+    <lightning-modal-body>
+        <div class="modal-shell">
+            <!-- Heading: class + pills -->
+            <div class="modal-head">
+                <div class="modal-class slds-truncate" title={record.Job_Class_Name__c}>
+                    {record.Job_Class_Name__c}
+                </div>
+                <div class="modal-pills">
+                    <span class="pill" style={record.typeStyle}>{record.typeLabel}</span>
+                    <span class="pill" style={record.statusStyle}>{record.Status__c}</span>
+                </div>
+            </div>
+
+            <!-- Progress bar -->
+            <template lwc:if={hasProgress}>
+                <div class="field-label">Progress</div>
+                <div class="prog-row">
+                    <div class="prog-track">
+                        <div class="prog-fill" style={barStyle}></div>
+                    </div>
+                    <span class="prog-text">{record.progressLabel} · {progressPctLabel}</span>
+                </div>
+            </template>
+
+            <!-- Stat grid -->
+            <div class="stat-grid">
+                <div class="stat-cell">
+                    <div class="stat-label">Errors</div>
+                    <div class={errorValueClass}>{record.Error_Count__c}</div>
+                </div>
+                <div class="stat-cell">
+                    <div class="stat-label">Duration</div>
+                    <div class="stat-value">{durationLabel}</div>
+                </div>
+                <div class="stat-cell">
+                    <div class="stat-label">Started</div>
+                    <div class="stat-value">
+                        <lightning-formatted-date-time value={record.Start_Time__c}
+                            year="numeric" month="short" day="2-digit"
+                            hour="2-digit" minute="2-digit"></lightning-formatted-date-time>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Job Id -->
+            <div class="field-label">Job Id</div>
+            <div class="jobid-row">
+                <code class="jobid">{record.Async_Job_Id__c}</code>
+                <lightning-button-icon icon-name="utility:copy" variant="border-filled" size="small"
+                    alternative-text="Copy Job Id" title="Copy Job Id" onclick={handleCopyJobId}></lightning-button-icon>
+            </div>
+
+            <!-- Failure reason -->
+            <template lwc:if={hasError}>
+                <div class="field-label error-label">
+                    <lightning-icon icon-name="utility:error" variant="error" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                    Failure reason
+                </div>
+                <pre class="detail-error">{failureReason}</pre>
+            </template>
+
+            <template lwc:if={copyStatus}>
+                <p class="copy-flash">
+                    <lightning-icon icon-name="utility:check" variant="success" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                    {copyStatus}
+                </p>
+            </template>
+        </div>
+    </lightning-modal-body>
+
+    <lightning-modal-footer>
+        <div class="footer-row">
+            <div class="footer-actions">
+                <template lwc:if={hasError}>
+                    <lightning-button label="Copy error" icon-name="utility:copy" onclick={handleCopyError}></lightning-button>
+                </template>
+                <lightning-button label="Apex Jobs" icon-name="utility:new_window" onclick={openApexJobs}></lightning-button>
+                <lightning-button label="Apex Classes" icon-name="utility:new_window" onclick={openApexClasses}></lightning-button>
+            </div>
+            <lightning-button variant="brand" label="Close" onclick={handleCloseClick}></lightning-button>
+        </div>
+    </lightning-modal-footer>
+</template>

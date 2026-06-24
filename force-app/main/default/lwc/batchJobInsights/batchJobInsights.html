@@ -1,0 +1,174 @@
+<template>
+    <lightning-card icon-name="standard:metrics">
+        <span slot="title" class="slds-grid slds-grid_vertical-align-center">
+            <span class="slds-m-right_x-small">{cardTitle}</span>
+            <lightning-helptext content="The most failure-prone and slowest batch classes over the selected window. Bars show each class relative to the worst performer; the mini chart is the daily average run time. Use Time Period to change the range."></lightning-helptext>
+        </span>
+        <!-- Header controls -->
+        <div slot="actions" class="slds-grid slds-gutters_x-small slds-grid_vertical-align-center">
+            <div class="slds-col">
+                <lightning-combobox
+                    name="timePeriod"
+                    label="Time Period"
+                    variant="label-hidden"
+                    value={timeValue}
+                    options={timeOptions}
+                    onchange={handleTimeChange}
+                ></lightning-combobox>
+            </div>
+            <div class="slds-col">
+                <lightning-button label="Refresh Now" icon-name="utility:refresh" onclick={handleRefresh} disabled={refreshing}></lightning-button>
+            </div>
+        </div>
+
+        <template lwc:if={loading}>
+            <div class="slds-is-relative slds-p-vertical_x-large">
+                <lightning-spinner alternative-text="Loading insights" size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:elseif={error}>
+            <div class="slds-text-color_error slds-p-around_medium slds-text-align_center">
+                <lightning-icon icon-name="utility:error" variant="error" size="x-small"></lightning-icon>
+                Unable to load insights.
+            </div>
+        </template>
+
+        <template lwc:else>
+          <div class="slds-is-relative">
+            <template lwc:if={refreshing}>
+                <lightning-spinner alternative-text="Refreshing insights" size="small"></lightning-spinner>
+            </template>
+            <lightning-layout multiple-rows="true" class="slds-p-around_x-small">
+                <!-- COLUMN 1: Top Failing Classes -->
+                <lightning-layout-item size="12" large-device-size="6" class="slds-p-around_x-small">
+                    <article class="slds-box slds-box_x-small dashboard-card">
+                        <div class="slds-grid slds-grid_vertical-align-center slds-m-bottom_small">
+                            <span class="hdr-avatar avatar-fail slds-m-right_small">
+                                <lightning-icon icon-name="utility:error" variant="inverse" size="small"></lightning-icon>
+                            </span>
+                            <div>
+                                <h2 class="slds-text-heading_small slds-text-title_bold">Top Failing Classes</h2>
+                                <p class="slds-text-body_small text-muted">
+                                    <span class="count-pill">{failingCount}</span> failing classes identified
+                                </p>
+                            </div>
+                        </div>
+
+                        <template lwc:if={hasFailing}>
+                            <div class="slds-grid slds-border_bottom slds-p-bottom_xx-small slds-text-title_caps text-muted col-head">
+                                <div class="slds-col slds-size_5-of-12">Class Name</div>
+                                <div class="slds-col slds-size_3-of-12">Ratio</div>
+                                <div class="slds-col slds-size_2-of-12 slds-text-align_right">Failures</div>
+                                <div class="slds-col slds-size_2-of-12 slds-text-align_right">%</div>
+                            </div>
+
+                            <div class="rows-scroll">
+                                <template for:each={failingClasses} for:item="cls">
+                                    <div key={cls.id} class="slds-grid slds-grid_vertical-align-center slds-border_bottom list-row">
+                                        <div class="slds-col slds-size_5-of-12 slds-truncate font-semibold">
+                                            <span class="rank-num">{cls.rank}</span>
+                                            <span title={cls.name}>{cls.name}</span>
+                                        </div>
+                                        <div class="slds-col slds-size_3-of-12 slds-p-right_small">
+                                            <div class="custom-progress-bar bg-fail-light">
+                                                <div class="bar-fill bg-fail-dark" style={cls.barWidthStyle}></div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_2-of-12 slds-text-align_right">
+                                            <div class="font-semibold">{cls.failCount}</div>
+                                            <div class="slds-text-body_small text-muted">{cls.totalRuns} runs</div>
+                                        </div>
+                                        <div class="slds-col slds-size_2-of-12 slds-text-align_right">
+                                            <span class="rate-badge">{cls.ratePct}</span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template lwc:else>
+                            <div class="empty-state">
+                                <lightning-icon icon-name="utility:success" variant="success" size="x-small"></lightning-icon>
+                                <span class="slds-m-left_xx-small">No failures in this window 🎉</span>
+                            </div>
+                        </template>
+                    </article>
+                </lightning-layout-item>
+
+                <!-- COLUMN 2: Slowest Classes -->
+                <lightning-layout-item size="12" large-device-size="6" class="slds-p-around_x-small">
+                    <article class="slds-box slds-box_x-small dashboard-card">
+                        <div class="slds-grid slds-grid_vertical-align-center slds-m-bottom_small">
+                            <span class="hdr-avatar avatar-slow slds-m-right_small">
+                                <lightning-icon icon-name="utility:clock" variant="inverse" size="small"></lightning-icon>
+                            </span>
+                            <div class="slds-col">
+                                <h2 class="slds-text-heading_small slds-text-title_bold">Slowest Classes</h2>
+                            </div>
+                            <!-- Avg run time micro-chart -->
+                            <div class="slds-col slds-grow-none trend-chart-container">
+                                <div class="slds-text-body_small text-muted text-uppercase">Avg. Run Time</div>
+                                <div class="slds-grid slds-grid_vertical-align-end">
+                                    <span class="avg-value">{avgRunTimeLabel}</span>
+                                    <template lwc:if={hasSpark}>
+                                        <svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">
+                                            <polyline points={sparkPoints} fill="none" stroke="#b76a00" stroke-width="2"></polyline>
+                                        </svg>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="slds-m-bottom_small">
+                            <lightning-input type="search" variant="label-hidden" placeholder="Search slow classes…" onchange={handleSearch}></lightning-input>
+                        </div>
+
+                        <div class="slds-grid slds-border_bottom slds-p-bottom_xx-small slds-text-title_caps text-muted col-head">
+                            <div class="slds-col slds-size_5-of-12">Class Name</div>
+                            <div class="slds-col slds-size_3-of-12">Duration</div>
+                            <div class="slds-col slds-size_2-of-12 slds-text-align_right">Avg (s)</div>
+                            <div class="slds-col slds-size_2-of-12 slds-text-align_right">Mult.</div>
+                        </div>
+
+                        <template lwc:if={hasSlow}>
+                            <div class="rows-scroll">
+                                <template for:each={filteredSlowClasses} for:item="cls">
+                                    <div key={cls.id} class="slds-grid slds-grid_vertical-align-center slds-border_bottom list-row">
+                                        <div class="slds-col slds-size_5-of-12 slds-truncate font-semibold">
+                                            <span class="rank-num">{cls.rank}</span>
+                                            <span title={cls.name}>{cls.name}</span>
+                                        </div>
+                                        <div class="slds-col slds-size_3-of-12 slds-p-right_small">
+                                            <div class="custom-progress-bar bg-slow-light">
+                                                <div class="bar-fill bg-slow-dark" style={cls.barWidthStyle}></div>
+                                            </div>
+                                        </div>
+                                        <div class="slds-col slds-size_2-of-12 slds-text-align_right">
+                                            <div class="font-semibold">{cls.duration}s</div>
+                                            <div class="slds-text-body_small text-muted">{cls.totalRuns} runs</div>
+                                        </div>
+                                        <div class="slds-col slds-size_2-of-12 slds-text-align_right">
+                                            <div class="font-semibold">{cls.multiplier}x</div>
+                                            <div class="slds-text-body_small text-muted">avg</div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template lwc:else>
+                            <div class="empty-state">
+                                <lightning-icon icon-name="utility:clock" size="x-small"></lightning-icon>
+                                <span class="slds-m-left_xx-small">No matching classes.</span>
+                            </div>
+                        </template>
+                    </article>
+                </lightning-layout-item>
+            </lightning-layout>
+          </div>
+        </template>
+
+        <div slot="footer" class="slds-text-align_center slds-text-body_small text-muted">
+            Next scheduled data refresh: within 15 minutes.
+        </div>
+    </lightning-card>
+</template>

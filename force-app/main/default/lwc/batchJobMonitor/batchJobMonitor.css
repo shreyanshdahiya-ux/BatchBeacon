@@ -1,0 +1,81 @@
+:host {
+    display: block;
+}
+
+.monitor-header {
+    background: linear-gradient(90deg, #032d60 0%, #0b5cab 100%);
+    border-radius: 0.25rem;
+    color: #ffffff;
+}
+
+.header-icon {
+    --slds-c-icon-color-foreground-default: #ffffff;
+}
+
+.header-sub {
+    color: #c9e7ff;
+}
+
+/* Health banner */
+.health-banner {
+    border-radius: 0.25rem;
+    margin-top: 0.5rem;
+}
+
+.banner-text {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.banner-healthy {
+    background: #ebf7ee;
+    border: 1px solid #b8e0c2;
+    color: #1e7e45;
+}
+
+.banner-critical {
+    background: #fdeaee;
+    border: 1px solid #f5c2cd;
+    color: #ba0517;
+}
+
+.live-pill {
+    display: inline-flex;
+    align-items: center;
+}
+
+.live-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #2e844a;
+    margin-right: 0.35rem;
+    animation: pulse 1.8s infinite;
+}
+
+/* Spin the refresh icon button while a manual refresh is in flight */
+.spinning {
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(46, 132, 74, 0.6);
+    }
+    70% {
+        box-shadow: 0 0 0 0.4rem rgba(46, 132, 74, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(46, 132, 74, 0);
+    }
+}

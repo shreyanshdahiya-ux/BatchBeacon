@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Avg_Duration_Seconds__c</fullName>
+    <label>Avg Duration (sec)</label>
+    <description>Average run duration for this class on this date.</description>
+    <type>Number</type>
+    <precision>10</precision>
+    <scale>2</scale>
+    <required>false</required>
+</CustomField>

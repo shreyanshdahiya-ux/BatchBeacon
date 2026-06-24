@@ -1,0 +1,166 @@
+.modal-shell {
+    padding: 0.25rem 0.25rem 0.5rem;
+}
+
+/* Heading */
+.modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-bottom: 0.6rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.modal-class {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #032d60;
+    max-width: 60%;
+}
+
+.modal-pills {
+    display: flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+/* Pills (inline style for bg/color comes from the row's typeStyle/statusStyle) */
+.pill {
+    white-space: nowrap;
+}
+
+/* Field labels */
+.field-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #706e6b;
+    font-weight: 700;
+    margin: 0.75rem 0 0.3rem;
+}
+
+.error-label {
+    display: flex;
+    align-items: center;
+}
+
+/* Progress */
+.prog-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.prog-track {
+    flex: 1 1 auto;
+    height: 0.55rem;
+    background: #eef1f6;
+    border-radius: 0.3rem;
+    overflow: hidden;
+}
+
+.prog-fill {
+    height: 100%;
+    border-radius: 0.3rem;
+    background: linear-gradient(90deg, #5b9bff, #2f6fed);
+    transition: width 0.3s ease;
+}
+
+.prog-text {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #514f4d;
+    white-space: nowrap;
+}
+
+/* Stat grid */
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.stat-cell {
+    background: #f8f9fb;
+    border: 1px solid #e9ecf2;
+    border-radius: 0.4rem;
+    padding: 0.5rem 0.6rem;
+}
+
+.stat-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #706e6b;
+}
+
+.stat-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #181818;
+    line-height: 1.3;
+}
+
+.val-error {
+    color: #ba0517;
+}
+
+/* Job Id */
+.jobid-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.jobid {
+    flex: 1 1 auto;
+    font-family: "SF Mono", Consolas, "Courier New", monospace;
+    font-size: 0.82rem;
+    background: #f3f3f3;
+    border-radius: 0.25rem;
+    padding: 0.3rem 0.5rem;
+    color: #181818;
+    word-break: break-all;
+}
+
+/* Failure block */
+.detail-error {
+    background: #1b1b1b;
+    color: #ff8b9a;
+    border-radius: 0.3rem;
+    padding: 0.65rem 0.8rem;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    max-height: 12rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+}
+
+.copy-flash {
+    color: #2e844a;
+    font-size: 0.8rem;
+    margin-top: 0.6rem;
+    display: flex;
+    align-items: center;
+}
+
+/* Footer */
+.footer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.footer-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}

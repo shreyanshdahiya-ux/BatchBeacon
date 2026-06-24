@@ -1,0 +1,61 @@
+<template>
+    <lightning-card title="Batch Jobs · Last 24 Hours" icon-name="utility:metrics">
+        <div class="slds-p-horizontal_small slds-p-bottom_small">
+            <template lwc:if={loading}>
+                <div class="slds-is-relative slds-p-vertical_large">
+                    <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+                </div>
+            </template>
+
+            <template lwc:else>
+                <template lwc:if={error}>
+                    <div class="slds-text-color_error slds-p-around_small slds-text-align_center">
+                        <lightning-icon icon-name="utility:error" variant="error" size="x-small"></lightning-icon>
+                        Unable to load summary.
+                    </div>
+                </template>
+
+                <template lwc:else>
+                    <!-- Headline KPIs -->
+                    <div class="kpi-row">
+                        <div class="kpi-block">
+                            <div class="kpi-total">{total}</div>
+                            <div class="kpi-cap">Executions · 24h</div>
+                        </div>
+                        <div class="kpi-block kpi-rate-block">
+                            <div class={rateClass}>{successRateLabel}</div>
+                            <div class="rate-bar">
+                                <div class={rateFillClass} style={rateBarStyle}></div>
+                            </div>
+                            <div class="kpi-cap">{healthLabel} · success rate</div>
+                        </div>
+                    </div>
+
+                    <!-- Status stat tiles -->
+                    <div class="stat-tiles">
+                        <div class="stat-tile">
+                            <lightning-icon icon-name="utility:success" variant="success" size="x-small"></lightning-icon>
+                            <div class="stat-num num-success">{successCount}</div>
+                            <div class="stat-cap">Completed</div>
+                        </div>
+                        <div class="stat-tile">
+                            <lightning-icon icon-name="utility:error" variant="error" size="x-small"></lightning-icon>
+                            <div class="stat-num num-fail">{failureCount}</div>
+                            <div class="stat-cap">Failed / aborted</div>
+                        </div>
+                        <div class="stat-tile">
+                            <lightning-icon icon-name="utility:spinner" size="x-small"></lightning-icon>
+                            <div class="stat-num num-progress">{inProgressCount}</div>
+                            <div class="stat-cap">In progress</div>
+                        </div>
+                    </div>
+                </template>
+            </template>
+        </div>
+
+        <p slot="footer" class="slds-text-body_small slds-text-color_weak slds-text-align_center">
+            <lightning-icon icon-name="utility:refresh" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+            Last refresh: {lastRefresh}
+        </p>
+    </lightning-card>
+</template>

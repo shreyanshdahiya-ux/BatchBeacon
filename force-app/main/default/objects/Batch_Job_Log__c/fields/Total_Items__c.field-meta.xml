@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Total_Items__c</fullName>
+    <label>Total Items</label>
+    <description>Total batch chunks for the job. Mapped from AsyncApexJob.TotalJobItems.</description>
+    <type>Number</type>
+    <precision>10</precision>
+    <scale>0</scale>
+    <required>false</required>
+</CustomField>
