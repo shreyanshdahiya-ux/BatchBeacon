@@ -2,32 +2,20 @@
     <lightning-card icon-name="standard:log_a_call">
         <span slot="title" class="slds-grid slds-grid_vertical-align-center">
             <span class="slds-m-right_x-small">Recent Batch Job Logs</span>
-            <lightning-helptext content="Most recent batch job executions. Filter by type (pills) and status, select rows to bulk-abort running jobs, and use the row menu to View details, Abort a running job, or Re-run a completed batch/queueable."></lightning-helptext>
+            <lightning-helptext content="Most recent batch job executions as cards. Filter by type (pills) and status, select cards to bulk-abort running jobs, and use each card's menu to View details, Abort a running job, or Re-run a completed batch/queueable."></lightning-helptext>
         </span>
-        <div slot="actions" class="slds-grid slds-gutters_xx-small">
-            <div class="slds-col">
-                <lightning-combobox
-                    name="status"
-                    label="Status"
-                    variant="label-hidden"
-                    value={selectedStatus}
-                    options={statusOptions}
-                    onchange={handleStatusChange}
-                ></lightning-combobox>
-            </div>
-            <div class="slds-col">
-                <lightning-combobox
-                    name="limit"
-                    label="Show"
-                    variant="label-hidden"
-                    value={limitN}
-                    options={limitOptions}
-                    onchange={handleLimitChange}
-                ></lightning-combobox>
-            </div>
+        <div slot="actions">
+            <lightning-combobox
+                name="limit"
+                label="Show"
+                variant="label-hidden"
+                value={limitN}
+                options={limitOptions}
+                onchange={handleLimitChange}
+            ></lightning-combobox>
         </div>
 
-        <!-- Toolbar: type filter pills + bulk actions -->
+        <!-- Toolbar: type pills + status filter + bulk actions -->
         <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-wrap slds-p-horizontal_small slds-p-bottom_x-small toolbar">
             <div class="slds-grid slds-wrap pill-row">
                 <template for:each={pills} for:item="pill">
@@ -41,7 +29,16 @@
                     ></lightning-button>
                 </template>
             </div>
-            <div class="slds-grid slds-grid_vertical-align-center">
+            <div class="slds-grid slds-grid_vertical-align-center slds-wrap toolbar-right">
+                <lightning-combobox
+                    name="status"
+                    label="Status"
+                    variant="label-hidden"
+                    value={selectedStatus}
+                    options={statusOptions}
+                    onchange={handleStatusChange}
+                    class="status-filter slds-m-right_x-small"
+                ></lightning-combobox>
                 <lightning-button
                     label={abortSelectedLabel}
                     icon-name="utility:close"
@@ -75,16 +72,98 @@
             </template>
 
             <template lwc:elseif={hasRows}>
-                <div class="logs-scroll">
-                    <c-beacon-datatable
-                        key-field="Id"
-                        data={rows}
-                        columns={columns}
-                        onrowaction={handleRowAction}
-                        onrowselection={handleRowSelection}
-                        resize-column-disabled
-                        min-column-width="70"
-                    ></c-beacon-datatable>
+                <div class="cards-scroll">
+                    <div class="slds-grid slds-wrap slds-gutters_x-small">
+                        <template for:each={rows} for:item="row">
+                            <div key={row.Id} class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-large-size_1-of-3 slds-p-bottom_x-small">
+                                <article class="log-card">
+                                    <!-- Card header -->
+                                    <div class="card-head">
+                                        <input type="checkbox" class="card-check" data-id={row.Id}
+                                            checked={row.selected} onchange={handleCardSelect} title="Select" />
+                                        <span class="status-pill" style={row.statusStyle}>{row.Status__c}</span>
+                                        <span class="card-class slds-truncate" title={row.Job_Class_Name__c}>{row.Job_Class_Name__c}</span>
+                                        <lightning-button-menu icon-name="utility:down" size="x-small"
+                                            variant="border-filled" menu-alignment="auto-right" alternative-text="Actions"
+                                            data-id={row.Id} onselect={handleCardAction} class="card-menu">
+                                            <template lwc:if={row.abortable}>
+                                                <lightning-menu-item value="abort" label="Abort job" prefix-icon-name="utility:close"></lightning-menu-item>
+                                            </template>
+                                            <template lwc:if={row.retryable}>
+                                                <lightning-menu-item value="retry" label="Re-run job" prefix-icon-name="utility:refresh"></lightning-menu-item>
+                                            </template>
+                                            <lightning-menu-item value="apexjobs" label="Apex Jobs" prefix-icon-name="utility:new_window"></lightning-menu-item>
+                                            <lightning-menu-item value="apexclasses" label="Apex Classes" prefix-icon-name="utility:new_window"></lightning-menu-item>
+                                        </lightning-button-menu>
+                                    </div>
+
+                                    <!-- Progress (batch jobs only) -->
+                                    <template lwc:if={row.isBatch}>
+                                        <div class="card-row">
+                                            <span class="card-label">Progress</span>
+                                            <div class="prog-track">
+                                                <div class="prog-fill" style={row.progressBarStyle}></div>
+                                            </div>
+                                            <span class="card-strong">{row.progressPctLabel}</span>
+                                        </div>
+                                    </template>
+                                    <template lwc:else>
+                                        <div class="single-note">
+                                            <lightning-icon icon-name="utility:info_alt" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                            Single unit · no chunk progress
+                                        </div>
+                                    </template>
+
+                                    <!-- Metrics grid -->
+                                    <div class="metric-grid">
+                                        <template lwc:if={row.isBatch}>
+                                            <div class="metric">
+                                                <span class="metric-label">Ran / Total</span>
+                                                <span class="metric-val">{row.ranTotalLabel}</span>
+                                            </div>
+                                            <div class="metric">
+                                                <span class="metric-label">Left</span>
+                                                <span class="metric-val">{row.Items_Remaining__c}</span>
+                                            </div>
+                                        </template>
+                                        <div class="metric">
+                                            <span class="metric-label">Duration</span>
+                                            <span class="metric-val">{row.durationLabel}</span>
+                                        </div>
+                                        <div class="metric">
+                                            <span class="metric-label">Errors</span>
+                                            <span class={row.errorClass}>
+                                                <template lwc:if={row.hasErrors}>
+                                                    <lightning-icon icon-name="utility:error" variant="error" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+                                                </template>
+                                                {row.Error_Count__c}
+                                            </span>
+                                        </div>
+                                        <div class="metric metric-type">
+                                            <span class="metric-label">Type</span>
+                                            <span class="type-pill" style={row.typeStyle}>{row.typeLabel}</span>
+                                        </div>
+                                        <div class="metric">
+                                            <span class="metric-label">Started</span>
+                                            <span class="metric-val">
+                                                <lightning-formatted-date-time value={row.Start_Time__c}
+                                                    month="short" day="2-digit" hour="2-digit" minute="2-digit"></lightning-formatted-date-time>
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Failure footer -->
+                                    <template lwc:if={row.hasFailure}>
+                                        <div class="card-fail">
+                                            <span class="fail-label">Failure</span>
+                                            <span class="fail-text slds-truncate" title={row.Failure_Reason__c}>{row.Failure_Reason__c}</span>
+                                            <span class="fail-id">{row.jobIdShort}</span>
+                                        </div>
+                                    </template>
+                                </article>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </template>
 

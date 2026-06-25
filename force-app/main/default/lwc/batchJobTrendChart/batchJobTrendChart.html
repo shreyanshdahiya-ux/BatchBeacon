@@ -2,32 +2,43 @@
     <lightning-card icon-name="utility:chart">
         <span slot="title" class="slds-grid slds-grid_vertical-align-center">
             <span class="slds-m-right_x-small">Daily Batch Job Trend</span>
-            <lightning-helptext content="Daily batch-job volume over the lookback window, stacked by Completed, Failed/Aborted and In Progress. Hover a bar for the per-status breakdown and total; use the dropdown to change the range."></lightning-helptext>
+            <lightning-helptext content="Daily batch-job volume over the selected window, stacked by Completed, In Progress and Failed/Aborted. Pick the window length and the end date; hover a bar for the per-status breakdown and total."></lightning-helptext>
         </span>
-        <div slot="actions">
-            <lightning-combobox
-                name="lookback"
-                label="Lookback"
-                variant="label-hidden"
-                value={lookbackDays}
-                options={lookbackOptions}
-                onchange={handleLookbackChange}
-            ></lightning-combobox>
+        <div slot="actions" class="slds-grid slds-gutters_xx-small slds-grid_vertical-align-center">
+            <div class="slds-col">
+                <lightning-input
+                    type="date"
+                    label="End date"
+                    variant="label-hidden"
+                    value={endDate}
+                    onchange={handleDateChange}
+                ></lightning-input>
+            </div>
+            <div class="slds-col">
+                <lightning-combobox
+                    name="lookback"
+                    label="Lookback"
+                    variant="label-hidden"
+                    value={lookbackStr}
+                    options={lookbackOptions}
+                    onchange={handleLookbackChange}
+                ></lightning-combobox>
+            </div>
         </div>
 
-        <!-- Stats strip -->
-        <div class="slds-grid slds-grid_align-spread slds-p-horizontal_small slds-p-bottom_xx-small stats-strip">
-            <div class="slds-text-align_center">
-                <div class="stat-value">{totalJobs}</div>
-                <div class="stat-label">Total</div>
+        <!-- Stat tiles -->
+        <div class="stat-tiles slds-p-horizontal_small slds-p-bottom_x-small">
+            <div class="stat-tile">
+                <div class="stat-num">{totalJobs}</div>
+                <div class="stat-cap">Total</div>
             </div>
-            <div class="slds-text-align_center">
-                <div class="stat-value">{avgPerDay}</div>
-                <div class="stat-label">Avg / day</div>
+            <div class="stat-tile">
+                <div class="stat-num">{avgPerDay}</div>
+                <div class="stat-cap">Avg / day</div>
             </div>
-            <div class="slds-text-align_center">
-                <div class="stat-value">{peakCount}</div>
-                <div class="stat-label">Peak · {peakDay}</div>
+            <div class="stat-tile">
+                <div class="stat-num">{peakCount}</div>
+                <div class="stat-cap">Peak · {peakDayLabel}</div>
             </div>
         </div>
 
@@ -45,11 +56,10 @@
                 </div>
             </template>
 
-            <!-- Empty state (only once loaded and no error) -->
             <template lwc:if={showEmpty}>
                 <div class="chart-state slds-text-align_center slds-text-color_weak">
                     <lightning-icon icon-name="utility:chart" size="small" class="slds-m-bottom_x-small"></lightning-icon>
-                    <p>No batch jobs in this window yet.</p>
+                    <p>No batch jobs in this window.</p>
                 </div>
             </template>
 

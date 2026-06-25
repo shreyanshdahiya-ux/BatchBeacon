@@ -1,6 +1,38 @@
+/* Stat tiles */
+.stat-tiles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+    padding-top: 0.15rem;
+}
+
+.stat-tile {
+    border: 1px solid #e3e6ec;
+    border-radius: 0.4rem;
+    background: #fff;
+    padding: 0.3rem 0.4rem;
+    text-align: center;
+}
+
+.stat-num {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #032d60;
+    line-height: 1.05;
+}
+
+.stat-cap {
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #706e6b;
+    margin-top: 0.15rem;
+}
+
+/* Chart */
 .chart-wrapper {
     position: relative;
-    height: 15rem;
+    height: 12rem;
     transition: height 0.2s ease;
 }
 
@@ -14,29 +46,9 @@
 }
 
 .chart-state {
-    height: 10rem;
+    height: 9rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-}
-
-.stats-strip {
-    border-bottom: 1px solid #e5e5e5;
-    margin-bottom: 0.5rem;
-    padding-top: 0.25rem;
-}
-
-.stat-value {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #032d60;
-    line-height: 1.1;
-}
-
-.stat-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: #706e6b;
 }

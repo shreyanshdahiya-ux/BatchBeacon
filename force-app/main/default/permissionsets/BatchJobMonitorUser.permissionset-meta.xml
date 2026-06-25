@@ -4,6 +4,11 @@
     <description>Grants read access to the ApexPulse batch monitor objects and dashboard controller.</description>
     <hasActivationRequired>false</hasActivationRequired>
 
+    <tabSettings>
+        <tab>Recent_Batch_Job_Logs</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+
     <classAccesses>
         <apexClass>BatchJobController</apexClass>
         <enabled>true</enabled>

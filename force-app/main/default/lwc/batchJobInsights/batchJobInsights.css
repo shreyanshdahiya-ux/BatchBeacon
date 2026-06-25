@@ -85,7 +85,7 @@
 }
 
 .bg-fail-dark {
-    background: linear-gradient(90deg, #6b5b86, #564563);
+    background: linear-gradient(90deg, #8a7caa, #6f6391);
 }
 
 .bg-slow-light {
@@ -93,7 +93,7 @@
 }
 
 .bg-slow-dark {
-    background: linear-gradient(90deg, #d98a0b, #b76a00);
+    background: linear-gradient(90deg, #e6b25c, #cf8f3a);
 }
 
 /* Badges & utilities */
@@ -132,7 +132,7 @@
 .avg-value {
     font-size: 1.05rem;
     font-weight: 700;
-    color: #b76a00;
+    color: #cf8f3a;
     margin-right: 0.4rem;
 }
 

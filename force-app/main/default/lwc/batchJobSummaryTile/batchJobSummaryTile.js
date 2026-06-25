@@ -2,6 +2,9 @@ import { LightningElement, api, wire } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
 import getLast24HourBreakdown from '@salesforce/apex/BatchJobController.getLast24HourBreakdown';
 
+const CIRC = 326.73; // 2 * pi * 52 (ring radius 52)
+const TARGET = 85;
+
 export default class BatchJobSummaryTile extends LightningElement {
     total = 0;
     successCount = 0;
@@ -14,7 +17,6 @@ export default class BatchJobSummaryTile extends LightningElement {
     _result;
     _refreshtick = 0;
 
-    // Parent bumps this on each platform event to force a re-fetch.
     @api
     get refreshtick() {
         return this._refreshtick;
@@ -52,73 +54,41 @@ export default class BatchJobSummaryTile extends LightningElement {
     }
 
     get successRate() {
-        return this.totalRuns > 0
-            ? Math.round((this.successCount / this.totalRuns) * 100)
-            : 100;
+        return this.totalRuns > 0 ? Math.round((this.successCount / this.totalRuns) * 100) : 0;
     }
 
     get successRateLabel() {
         return this.totalRuns > 0 ? `${this.successRate}%` : '—';
     }
 
-    get hasFailures() {
-        return this.failureCount > 0;
+    get finished() {
+        return this.successCount + this.failureCount;
     }
 
-    get hasInProgress() {
-        return this.inProgressCount > 0;
+    get progressFraction() {
+        return `${this.finished}/${this.total}`;
     }
 
-    // Drives the health ring colour and icon.
-    get isHealthy() {
-        return this.successRate >= 95;
+    get progressBarStyle() {
+        return `width:${this.total > 0 ? Math.round((this.finished / this.total) * 100) : 0}%`;
     }
 
-    get isWarning() {
-        return this.successRate >= 80 && this.successRate < 95;
-    }
-
-    get healthIcon() {
-        if (this.failureCount === 0) {
-            return 'utility:success';
-        }
-        return this.isWarning ? 'utility:warning' : 'utility:error';
-    }
-
-    get healthIconVariant() {
-        if (this.failureCount === 0) {
-            return 'success';
-        }
-        return this.isWarning ? 'warning' : 'error';
-    }
-
-    get rateClass() {
-        const base = 'kpi-rate ';
-        if (this.failureCount === 0 || this.isHealthy) {
-            return base + 'rate-healthy';
-        }
-        return this.isWarning ? base + 'rate-warning' : base + 'rate-critical';
-    }
-
-    get healthLabel() {
+    get ringColor() {
         if (this.totalRuns === 0) {
-            return 'No data';
+            return '#9aa5b1';
         }
-        if (this.failureCount === 0 || this.isHealthy) {
-            return 'Healthy';
+        if (this.successRate >= TARGET) {
+            return '#4ca877';
         }
-        return this.isWarning ? 'Watch' : 'Critical';
+        return this.successRate >= 70 ? '#e6b257' : '#d56e7c';
     }
 
-    get rateBarStyle() {
-        return `width:${this.totalRuns > 0 ? this.successRate : 0}%`;
+    get ringStyle() {
+        const r = this.totalRuns > 0 ? this.successRate : 0;
+        return `stroke-dasharray:${CIRC};stroke-dashoffset:${CIRC * (1 - r / 100)};stroke:${this.ringColor};`;
     }
 
-    get rateFillClass() {
-        const base = 'rate-fill ';
-        if (this.failureCount === 0 || this.isHealthy) {
-            return base + 'fill-healthy';
-        }
-        return this.isWarning ? base + 'fill-warning' : base + 'fill-critical';
+    get rateTextStyle() {
+        return `color:${this.ringColor};`;
     }
 }

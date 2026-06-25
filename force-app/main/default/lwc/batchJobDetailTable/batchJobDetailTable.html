@@ -10,7 +10,7 @@
                     type="search"
                     label="Search class"
                     variant="label-hidden"
-                    placeholder="Filter by class…"
+                    placeholder="Search by Class…"
                     value={searchTerm}
                     onchange={handleSearch}
                 ></lightning-input>
@@ -26,9 +26,9 @@
             </div>
         </div>
 
-        <div class="slds-p-horizontal_small slds-p-bottom_small">
+        <div class="slds-p-horizontal_small slds-p-bottom_x-small">
             <template lwc:if={loading}>
-                <div class="slds-is-relative slds-p-vertical_x-large">
+                <div class="slds-is-relative slds-p-vertical_large">
                     <lightning-spinner alternative-text="Loading table" size="small"></lightning-spinner>
                 </div>
             </template>
@@ -42,30 +42,55 @@
 
             <template lwc:elseif={hasRows}>
                 <div class="table-scroll">
-                    <c-beacon-datatable
-                        key-field="Id"
-                        data={rows}
-                        columns={columns}
-                        sorted-by={sortedBy}
-                        sorted-direction={sortDirection}
-                        onsort={handleSort}
-                        hide-checkbox-column
-                        resize-column-disabled
-                        min-column-width="80"
-                    ></c-beacon-datatable>
+                    <table class="pj-table">
+                        <thead>
+                            <tr>
+                                <template for:each={headers} for:item="h">
+                                    <th key={h.field} class={h.cls} data-field={h.field} onclick={handleSort}>
+                                        {h.label} <span class="arrow">{h.arrow}</span>
+                                    </th>
+                                </template>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={rows} for:item="row">
+                                <tr key={row.Id}>
+                                    <td class="name-cell">
+                                        <lightning-icon icon-name={row.statusIcon} variant={row.statusVariant} size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+                                        <span class="name-text slds-truncate" title={row.Job_Class_Name__c}>{row.Job_Class_Name__c}</span>
+                                    </td>
+                                    <td class="ta-center">{row.Run_Count__c}</td>
+                                    <td class="ta-center num-success">{row.Success_Count__c}</td>
+                                    <td class="ta-center">
+                                        <span class={row.failPillClass}>{row.Failure_Count__c}</span>
+                                    </td>
+                                    <td class="ta-center">{row.In_Progress_Count__c}</td>
+                                    <td>
+                                        <div class="rate-cell">
+                                            <div class="rate-track">
+                                                <div class={row.rateBarClass} style={row.rateBarStyle}></div>
+                                            </div>
+                                            <span class="rate-pill" style={row.ratePillStyle}>{row.ratePctLabel}</span>
+                                        </div>
+                                    </td>
+                                    <td class="ta-right">{row.avgLabel}</td>
+                                    <td class="date-cell">{row.dateLabel}</td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
             </template>
 
             <template lwc:else>
-                <div class="slds-text-align_center slds-text-color_weak slds-p-around_large">
+                <div class="slds-text-align_center slds-text-color_weak slds-p-around_medium">
                     <lightning-icon icon-name="standard:job_profile" size="small" class="slds-m-bottom_x-small"></lightning-icon>
                     <p>No batch jobs recorded for the selected date.</p>
                 </div>
             </template>
         </div>
 
-        <p slot="footer" class="slds-text-body_small slds-text-color_weak">
-            <lightning-icon icon-name="utility:summary" size="xx-small" class="slds-m-right_xx-small"></lightning-icon>
+        <p slot="footer" class="slds-text-body_small slds-text-color_weak slds-text-align_center">
             {summaryLabel}
         </p>
     </lightning-card>

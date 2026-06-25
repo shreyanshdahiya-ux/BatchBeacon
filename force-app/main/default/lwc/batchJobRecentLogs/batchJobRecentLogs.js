@@ -1,19 +1,14 @@
 import { LightningElement, api, track, wire } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import BatchJobDetailModal from 'c/batchJobDetailModal';
 import getRecentLogs from '@salesforce/apex/BatchJobController.getRecentLogs';
 import abortJob from '@salesforce/apex/BatchJobController.abortJob';
 import abortJobs from '@salesforce/apex/BatchJobController.abortJobs';
 import retryJob from '@salesforce/apex/BatchJobController.retryJob';
 
-// Statuses for which an abort is still meaningful.
 const ABORTABLE = new Set(['Queued', 'Processing', 'Holding', 'Preparing']);
-// Terminal statuses that can be re-run.
 const TERMINAL = new Set(['Completed', 'Failed', 'Aborted']);
-// Job types we can re-run generically.
 const RETRYABLE_TYPES = new Set(['BatchApex', 'Queueable']);
-// Friendly labels for the AsyncApexJob JobType values.
 const TYPE_LABELS = {
     BatchApex: 'Batch',
     ScheduledApex: 'Scheduled',
@@ -21,8 +16,7 @@ const TYPE_LABELS = {
     Queueable: 'Queueable'
 };
 
-// Shared pill styling (inline so it renders inside the datatable shadow DOM).
-const PILL = 'display:inline-block;padding:2px 9px;border-radius:11px;font-size:11px;font-weight:600;line-height:1.4;';
+const PILL = 'display:inline-flex;align-items:center;padding:2px 9px;border-radius:11px;font-size:11px;font-weight:700;line-height:1.4;text-transform:uppercase;letter-spacing:0.02em;';
 
 function statusPill(status) {
     if (status === 'Completed') {
@@ -50,68 +44,18 @@ function typePill(jobType) {
     }
 }
 
-const COLUMNS = [
-    { label: 'Job Class', fieldName: 'Job_Class_Name__c', type: 'text', wrapText: true, initialWidth: 180 },
-    {
-        label: 'Type', fieldName: 'Job_Type__c', type: 'pill', initialWidth: 105,
-        typeAttributes: { text: { fieldName: 'typeLabel' }, style: { fieldName: 'typeStyle' } }
-    },
-    {
-        label: 'Status', fieldName: 'Status__c', type: 'pill', initialWidth: 115,
-        typeAttributes: { text: { fieldName: 'Status__c' }, style: { fieldName: 'statusStyle' } }
-    },
-    {
-        label: 'Start Time', fieldName: 'Start_Time__c', type: 'date', initialWidth: 160,
-        typeAttributes: {
-            year: 'numeric', month: 'short', day: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        }
-    },
-    {
-        label: 'Duration (s)', fieldName: 'Duration_Seconds__c', type: 'number', initialWidth: 110,
-        cellAttributes: { alignment: 'left' }
-    },
-    {
-        label: 'Ran / Total', fieldName: 'progressLabel', type: 'text', initialWidth: 105,
-        cellAttributes: { alignment: 'left' }
-    },
-    {
-        label: 'Progress', fieldName: 'progressPct', type: 'percent', initialWidth: 100,
-        typeAttributes: { minimumFractionDigits: 0, maximumFractionDigits: 0 }
-    },
-    {
-        label: 'Left', fieldName: 'Items_Remaining__c', type: 'number', initialWidth: 75,
-        cellAttributes: { alignment: 'left', class: { fieldName: 'remainingClass' } }
-    },
-    {
-        label: 'Errors', fieldName: 'Error_Count__c', type: 'number', initialWidth: 80,
-        cellAttributes: { alignment: 'left', class: { fieldName: 'errorClass' } }
-    },
-    {
-        label: 'Failure Reason', fieldName: 'Failure_Reason__c', type: 'text', wrapText: true, initialWidth: 300,
-        cellAttributes: { class: 'slds-text-color_error' }
+function barFill(status) {
+    if (status === 'Completed') {
+        return '#6f9fe6';
     }
-];
+    if (status === 'Failed' || status === 'Aborted') {
+        return '#9678e3';
+    }
+    return '#6fb4f0';
+}
 
 export default class BatchJobRecentLogs extends LightningElement {
-    // Row actions: View details (always), plus Abort (in-progress) or Re-run (terminal).
-    getRowActions = (row, doneCallback) => {
-        const actions = [{ label: 'View details', name: 'details', iconName: 'utility:preview' }];
-        if (ABORTABLE.has(row.Status__c)) {
-            actions.push({ label: 'Abort job', name: 'abort', iconName: 'utility:close' });
-        } else if (TERMINAL.has(row.Status__c) && RETRYABLE_TYPES.has(row.Job_Type__c)) {
-            actions.push({ label: 'Re-run job', name: 'retry', iconName: 'utility:refresh' });
-        }
-        doneCallback(actions);
-    };
-
-    columns = [
-        ...COLUMNS,
-        { type: 'action', typeAttributes: { rowActions: this.getRowActions } }
-    ];
-
     @track rows = [];
-    selectedRows = [];
     selectedType = 'All';
     selectedStatus = 'All';
     limitN = 25;
@@ -119,6 +63,7 @@ export default class BatchJobRecentLogs extends LightningElement {
     error;
 
     _data = [];
+    _selected = new Set();
     _result;
     _refreshtick = 0;
 
@@ -133,7 +78,6 @@ export default class BatchJobRecentLogs extends LightningElement {
         }
     }
 
-    // Imperatively driven by the parent (e.g. the health banner's "View failures").
     @api
     applyStatusFilter(status) {
         if (status) {
@@ -160,8 +104,8 @@ export default class BatchJobRecentLogs extends LightningElement {
         ];
     }
 
-    // Filter pills with active-state styling.
     get pills() {
+        const counts = this.typeCounts;
         const defs = [
             { label: 'All', value: 'All' },
             { label: 'Batch', value: 'BatchApex' },
@@ -171,8 +115,17 @@ export default class BatchJobRecentLogs extends LightningElement {
         ];
         return defs.map((d) => ({
             ...d,
+            count: counts[d.value] || 0,
             variant: d.value === this.selectedType ? 'brand' : 'neutral'
         }));
+    }
+
+    get typeCounts() {
+        const c = { All: this._data.length };
+        this._data.forEach((r) => {
+            c[r.Job_Type__c] = (c[r.Job_Type__c] || 0) + 1;
+        });
+        return c;
     }
 
     @wire(getRecentLogs, { limitN: '$limitN' })
@@ -192,21 +145,24 @@ export default class BatchJobRecentLogs extends LightningElement {
     decorate(row) {
         const processed = row.Items_Processed__c || 0;
         const total = row.Total_Items__c || 0;
-        const remaining = row.Items_Remaining__c || 0;
-
+        const pct = total > 0 ? Math.round((processed / total) * 100) : 0;
         return {
             ...row,
+            isBatch: row.Job_Type__c === 'BatchApex',
             typeLabel: TYPE_LABELS[row.Job_Type__c] || row.Job_Type__c || '—',
             typeStyle: typePill(row.Job_Type__c),
             statusStyle: statusPill(row.Status__c),
-            progressLabel: total > 0 ? `${processed} / ${total}` : '—',
-            progressPct: total > 0 ? processed / total : null,
-            remainingClass: remaining > 0
-                ? 'slds-text-color_warning slds-text-title_bold'
-                : 'slds-text-color_weak',
-            errorClass: (row.Error_Count__c || 0) > 0
-                ? 'slds-text-color_error slds-text-title_bold'
-                : 'slds-text-color_weak'
+            progressPctLabel: total > 0 ? `${pct}%` : '—',
+            progressBarStyle: `width:${pct}%;background:${barFill(row.Status__c)};`,
+            ranTotalLabel: total > 0 ? `${processed} / ${total}` : '—',
+            durationLabel: row.Duration_Seconds__c != null ? `${row.Duration_Seconds__c}s` : '—',
+            jobIdShort: row.Async_Job_Id__c ? row.Async_Job_Id__c.substring(0, 12) + '…' : '',
+            hasFailure: !!row.Failure_Reason__c,
+            hasErrors: (row.Error_Count__c || 0) > 0,
+            errorClass: (row.Error_Count__c || 0) > 0 ? 'metric-val val-error' : 'metric-val',
+            abortable: ABORTABLE.has(row.Status__c),
+            retryable: TERMINAL.has(row.Status__c) && RETRYABLE_TYPES.has(row.Job_Type__c),
+            selected: this._selected.has(row.Id)
         };
     }
 
@@ -218,17 +174,17 @@ export default class BatchJobRecentLogs extends LightningElement {
         if (this.selectedStatus !== 'All') {
             view = view.filter((r) => this.matchesStatus(r));
         }
-        this.rows = view;
+        this.rows = view.map((r) => ({ ...r, selected: this._selected.has(r.Id) }));
     }
 
-    matchesStatus(row) {
+    matchesStatus(r) {
         switch (this.selectedStatus) {
             case 'Completed':
-                return row.Status__c === 'Completed';
+                return r.Status__c === 'Completed';
             case 'Failed':
-                return row.Status__c === 'Failed' || row.Status__c === 'Aborted';
+                return r.Status__c === 'Failed' || r.Status__c === 'Aborted';
             case 'Running':
-                return ABORTABLE.has(row.Status__c);
+                return ABORTABLE.has(r.Status__c);
             default:
                 return true;
         }
@@ -238,53 +194,30 @@ export default class BatchJobRecentLogs extends LightningElement {
         this.limitN = parseInt(event.detail.value, 10);
     }
 
-    handlePillClick(event) {
-        this.selectedType = event.target.dataset.value;
-        this.applyView();
-    }
-
     handleStatusChange(event) {
         this.selectedStatus = event.detail.value;
         this.applyView();
     }
 
-    handleRowSelection(event) {
-        this.selectedRows = event.detail.selectedRows;
+    handlePillClick(event) {
+        this.selectedType = event.target.dataset.value;
+        this.applyView();
     }
 
-    // --- Single row action -------------------------------------------------
-    handleRowAction(event) {
-        const action = event.detail.action;
-        const row = event.detail.row;
-        if (action.name === 'details') {
-            BatchJobDetailModal.open({ size: 'medium', record: row });
-            return;
+    // --- Selection --------------------------------------------------------
+    handleCardSelect(event) {
+        const id = event.target.dataset.id;
+        if (event.target.checked) {
+            this._selected.add(id);
+        } else {
+            this._selected.delete(id);
         }
-        if (action.name === 'abort') {
-            if (!row.Async_Job_Id__c) {
-                this.toast('Cannot abort', 'This log has no job Id.', 'warning');
-                return;
-            }
-            abortJob({ jobId: row.Async_Job_Id__c })
-                .then(() => {
-                    this.toast('Job aborted', `${row.Job_Class_Name__c || 'Job'} was aborted.`, 'success');
-                    this.refresh();
-                })
-                .catch((e) => this.toast('Abort failed', this.errMsg(e), 'error'));
-        } else if (action.name === 'retry') {
-            retryJob({ className: row.Job_Class_Name__c, jobType: row.Job_Type__c })
-                .then(() => {
-                    this.toast('Re-run started', `${row.Job_Class_Name__c} was re-submitted.`, 'success');
-                    this.refresh();
-                })
-                .catch((e) => this.toast('Re-run failed', this.errMsg(e), 'error'));
-        }
+        this.rows = this.rows.map((r) => (r.Id === id ? { ...r, selected: event.target.checked } : r));
     }
 
-    // --- Bulk actions ------------------------------------------------------
     get selectedAbortableIds() {
-        return this.selectedRows
-            .filter((r) => ABORTABLE.has(r.Status__c) && r.Async_Job_Id__c)
+        return this._data
+            .filter((r) => this._selected.has(r.Id) && ABORTABLE.has(r.Status__c) && r.Async_Job_Id__c)
             .map((r) => r.Async_Job_Id__c);
     }
 
@@ -322,12 +255,76 @@ export default class BatchJobRecentLogs extends LightningElement {
         abortJobs({ jobIds: ids })
             .then(() => {
                 this.toast('Jobs aborted', `${ids.length} ${label} job(s) aborted.`, 'success');
+                this._selected.clear();
                 this.refresh();
             })
             .catch((e) => this.toast('Bulk abort failed', this.errMsg(e), 'error'));
     }
 
-    // --- helpers -----------------------------------------------------------
+    // --- Per-card actions -------------------------------------------------
+    handleCardAction(event) {
+        const action = event.detail.value;
+        const id = event.currentTarget.dataset.id;
+        if (action === 'apexjobs') {
+            this.openInNewTab('/lightning/setup/AsyncApexJobs/home');
+            return;
+        }
+        if (action === 'apexclasses') {
+            this.openInNewTab('/lightning/setup/ApexClasses/home');
+            return;
+        }
+
+        const row = this._data.find((r) => r.Id === id);
+        if (!row) {
+            return;
+        }
+        if (action === 'abort') {
+            if (!row.Async_Job_Id__c) {
+                this.toast('Cannot abort', 'This log has no job Id.', 'warning');
+                return;
+            }
+            abortJob({ jobId: row.Async_Job_Id__c })
+                .then(() => {
+                    this.toast('Job aborted', `${row.Job_Class_Name__c || 'Job'} was aborted.`, 'success');
+                    this.refresh();
+                })
+                .catch((e) => this.toast('Abort failed', this.errMsg(e), 'error'));
+        } else if (action === 'retry') {
+            retryJob({ className: row.Job_Class_Name__c, jobType: row.Job_Type__c })
+                .then(() => {
+                    this.toast('Re-run started', `${row.Job_Class_Name__c} was re-submitted.`, 'success');
+                    this.refresh();
+                })
+                .catch((e) => this.toast('Re-run failed', this.errMsg(e), 'error'));
+        }
+    }
+
+    openInNewTab(path) {
+        const url = window.location.origin + path;
+        try {
+            const win = window.open(url, '_blank', 'noopener,noreferrer');
+            if (win) {
+                return;
+            }
+        } catch (e) {
+            // fall through
+        }
+        try {
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            return;
+        } catch (e) {
+            // fall through
+        }
+        window.location.assign(url);
+    }
+
+    // --- helpers ----------------------------------------------------------
     refresh() {
         if (this._result) {
             refreshApex(this._result);
@@ -348,7 +345,6 @@ export default class BatchJobRecentLogs extends LightningElement {
 
     get rowCountLabel() {
         const shown = this.rows.length;
-        const filter = this.selectedType === 'All' ? '' : ` · ${TYPE_LABELS[this.selectedType] || this.selectedType}`;
-        return `${shown} log${shown === 1 ? '' : 's'} shown${filter}`;
+        return `${shown} log${shown === 1 ? '' : 's'} shown`;
     }
 }

@@ -19,6 +19,10 @@ public with sharing class BatchJobRollupHelper {
      *  Preparing, Holding, …) is treated as still-in-progress — neither success
      *  nor failure — so running jobs don't inflate the failure count. */
     private static final Set<String> FAILURE_STATUSES = new Set<String>{ 'Failed', 'Aborted' };
+    /** Batch Beacon's own jobs — excluded so the monitor doesn't report on itself. */
+    private static final Set<String> EXCLUDED_CLASSES = new Set<String>{
+        'BatchJobTrackerScheduled', 'BatchJobLogPurgeScheduled'
+    };
 
     /**
      * Called from the scheduled tracker (system context, no end user). The log /
@@ -43,6 +47,10 @@ public with sharing class BatchJobRollupHelper {
             String className = (j.ApexClass != null && j.ApexClass.Name != null)
                 ? j.ApexClass.Name
                 : 'Unknown';
+            // Skip Batch Beacon's own scheduled jobs so it doesn't monitor itself.
+            if (EXCLUDED_CLASSES.contains(className)) {
+                continue;
+            }
             Date bucket = (j.CreatedDate != null)
                 ? Date.valueOf(j.CreatedDate)
                 : Date.today();
