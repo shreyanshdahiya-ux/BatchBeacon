@@ -13,12 +13,8 @@
     <label>Batch Beacon</label>
     <navType>Standard</navType>
     <tabs>Job_Monitor</tabs>
-    <tabs>Job_Summary_Tiles</tabs>
-    <tabs>Jobs_Trend_Chart</tabs>
-    <tabs>Job_Detail_Table</tabs>
     <tabs>Recent_Batch_Job_Logs</tabs>
     <tabs>Batch_Job_Log__c</tabs>
     <tabs>Daily_Job_Summary__c</tabs>
     <uiType>Lightning</uiType>
-    <utilityBar>Batch_Beacon_UtilityBar</utilityBar>
 </CustomApplication>

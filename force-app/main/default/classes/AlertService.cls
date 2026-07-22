@@ -69,7 +69,15 @@ public with sharing class AlertService {
     /**
      * Writes the dashboard toggle to the org-default row, creating it on first use.
      * Returns the persisted value so the UI reflects what actually landed.
+     *
+     * Upserts an org-wide app config value (no user data). This is a trusted app
+     * write gated by access to BatchJobController, and hierarchy custom settings
+     * are governed by "Customize Application" rather than record FLS — enforcing
+     * user mode would instead block the very dashboard users meant to toggle it —
+     * so the CRUD/FLS finding is intentionally suppressed.
      */
+    /* sfge-disable-stack ApexFlsViolationRule */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     public static Boolean setAlertsEnabled(Boolean enabled) {
         Boolean target = (enabled == true);
         Batch_Beacon_Config__c cfg = Batch_Beacon_Config__c.getOrgDefaults();
@@ -161,7 +169,14 @@ public with sharing class AlertService {
     @TestVisible
     private static Set<String> mockRecipients;
 
-    /** Active users holding the monitor permission set. */
+    /**
+     * Active users holding the monitor permission set. Reads PermissionSetAssignment
+     * (a system/setup object) from the scheduled tracker's system context — there is
+     * no end user to FLS-gate — so the analyzer finding is intentionally suppressed,
+     * matching BatchJobTrackerScheduled.queryRecentJobs().
+     */
+    /* sfge-disable-stack ApexFlsViolationRule */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     @TestVisible
     private static Set<String> recipientIds() {
         if (mockRecipients != null) {
@@ -180,7 +195,13 @@ public with sharing class AlertService {
         return ids;
     }
 
-    /** Resolves the notification type Id. Throws if the type was not deployed. */
+    /**
+     * Resolves the notification type Id. Throws if the type was not deployed.
+     * Reads CustomNotificationType (a setup object) in system context — nothing to
+     * FLS-gate — so the analyzer finding is intentionally suppressed.
+     */
+    /* sfge-disable-stack ApexFlsViolationRule */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
     private static Id notificationTypeId() {
         List<CustomNotificationType> types = [
             SELECT Id
