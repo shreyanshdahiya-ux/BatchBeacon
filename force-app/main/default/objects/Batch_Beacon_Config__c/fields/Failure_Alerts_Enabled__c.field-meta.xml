@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Failure_Alerts_Enabled__c</fullName>
+    <label>Failure Alerts Enabled</label>
+    <description>When checked, the tracker sends a bell/mobile notification for newly failed or aborted jobs. Toggled from the Batch Job Monitor header. Unset is treated as enabled.</description>
+    <type>Checkbox</type>
+    <defaultValue>true</defaultValue>
+</CustomField>

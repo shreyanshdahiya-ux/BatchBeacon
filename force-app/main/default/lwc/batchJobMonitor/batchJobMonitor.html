@@ -11,11 +11,26 @@
                 <span class={statusClass}>
                     <span class="live-dot"></span>{statusLabel}
                 </span>
+                <div class="slds-grid slds-grid_vertical-align-center alert-toggle-wrap slds-m-left_x-small" title={alertsTooltip}>
+                    <lightning-icon icon-name="utility:notification" size="xx-small" class="slds-m-right_xx-small header-icon"></lightning-icon>
+                    <lightning-input
+                        type="toggle"
+                        label="Failure alerts"
+                        variant="label-hidden"
+                        checked={alertsEnabled}
+                        message-toggle-active=""
+                        message-toggle-inactive=""
+                        disabled={togglingAlerts}
+                        onchange={handleAlertsToggle}
+                        class="alert-toggle"
+                    ></lightning-input>
+                </div>
                 <lightning-button
                     label="Sync now"
                     icon-name="utility:sync"
                     variant="brand"
                     class="slds-m-left_x-small"
+                    title="Pull the latest jobs from Salesforce now — runs the tracker on demand instead of waiting for the 15-minute schedule."
                     onclick={handleSyncNow}
                     disabled={syncing}
                 ></lightning-button>

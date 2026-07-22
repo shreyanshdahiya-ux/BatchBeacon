@@ -25,6 +25,10 @@
         <apexClass>BatchJobLogPurgeScheduled</apexClass>
         <enabled>true</enabled>
     </classAccesses>
+    <classAccesses>
+        <apexClass>AlertService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
 
     <objectPermissions>
         <object>Batch_Job_Log__c</object>
@@ -115,6 +119,13 @@
     </fieldPermissions>
     <fieldPermissions>
         <field>Batch_Job_Log__c.Date_Bucket__c</field>
+        <readable>true</readable>
+        <editable>false</editable>
+    </fieldPermissions>
+    <!-- Dedup marker. Written only by AlertService in system context, so it is
+         readable (for reporting) but never editable by dashboard users. -->
+    <fieldPermissions>
+        <field>Batch_Job_Log__c.Failure_Alert_Sent__c</field>
         <readable>true</readable>
         <editable>false</editable>
     </fieldPermissions>

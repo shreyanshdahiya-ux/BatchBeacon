@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Failure_Alert_Sent__c</fullName>
+    <label>Failure Alert Sent</label>
+    <description>Set by AlertService once a failure notification covering this log has been sent. Prevents re-alerting when the tracker re-ingests the same rolling 24-hour window. The tracker's upsert never assigns this field, so the flag survives re-ingestion.</description>
+    <type>Checkbox</type>
+    <defaultValue>false</defaultValue>
+</CustomField>

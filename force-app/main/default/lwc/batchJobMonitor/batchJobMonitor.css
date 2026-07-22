@@ -16,6 +16,16 @@
     color: #c9e7ff;
 }
 
+/* Failure-alert toggle (sits on the dark header) */
+.alert-toggle-wrap {
+    cursor: help;
+}
+
+.alert-toggle {
+    --slds-c-checkbox-toggle-color-background: rgba(255, 255, 255, 0.35);
+    --slds-c-checkbox-toggle-shadow-focus: 0 0 3px #c9e7ff;
+}
+
 /* Health banner */
 .health-banner {
     border-radius: 0.25rem;

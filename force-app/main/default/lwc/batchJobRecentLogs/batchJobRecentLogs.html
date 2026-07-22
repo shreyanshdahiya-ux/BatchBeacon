@@ -156,7 +156,8 @@
                                     <template lwc:if={row.hasFailure}>
                                         <div class="card-fail">
                                             <span class="fail-label">Failure</span>
-                                            <span class="fail-text slds-truncate" title={row.Failure_Reason__c}>{row.Failure_Reason__c}</span>
+                                            <a class="fail-text fail-link slds-truncate" title={row.Failure_Reason__c}
+                                                onclick={handleErrorClick}>{row.Failure_Reason__c}</a>
                                             <span class="fail-id">{row.jobIdShort}</span>
                                         </div>
                                     </template>

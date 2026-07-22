@@ -5,7 +5,8 @@
  *
  * Each run queries AsyncApexJob for BatchApex executions in the last 24 hours
  * (1 SOQL, capped at 2,000 rows) and delegates all aggregation + DML to
- * BatchJobRollupHelper. No queries run inside loops.
+ * BatchJobRollupHelper, then hands off to AlertService for failure
+ * notifications. No queries run inside loops.
  *
  * For unit testing, set BatchJobTrackerScheduled.mockJobs to bypass the SOQL —
  * AsyncApexJob is read-only and cannot be inserted in tests.
@@ -25,6 +26,9 @@ global with sharing class BatchJobTrackerScheduled implements Schedulable {
             return;
         }
         BatchJobRollupHelper.process(jobs);
+        // Notify on anything that failed since the last run. Never throws — a
+        // notification problem must not break ingestion.
+        AlertService.runAlerts();
     }
 
     /** Async job types we monitor. BatchApexWorker (per-chunk children) is

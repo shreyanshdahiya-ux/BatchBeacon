@@ -4,6 +4,8 @@ import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getLast24HourBreakdown from '@salesforce/apex/BatchJobController.getLast24HourBreakdown';
 import syncNow from '@salesforce/apex/BatchJobController.syncNow';
+import getFailureAlertsEnabled from '@salesforce/apex/BatchJobController.getFailureAlertsEnabled';
+import setFailureAlertsEnabled from '@salesforce/apex/BatchJobController.setFailureAlertsEnabled';
 
 const CHANNEL = '/event/Batch_Job_Update__e';
 
@@ -14,6 +16,8 @@ export default class BatchJobMonitor extends LightningElement {
     lastEventTime;
     syncing = false;
     refreshing = false;
+    alertsEnabled = true;
+    togglingAlerts = false;
 
     // Drives the health banner.
     failures = 0;
@@ -21,6 +25,15 @@ export default class BatchJobMonitor extends LightningElement {
     total = 0;
 
     _breakdownResult;
+    _alertsResult;
+
+    @wire(getFailureAlertsEnabled)
+    wiredAlertsEnabled(result) {
+        this._alertsResult = result;
+        if (result.data !== undefined && result.data !== null) {
+            this.alertsEnabled = result.data;
+        }
+    }
 
     @wire(getLast24HourBreakdown)
     wiredBreakdown(result) {
@@ -100,6 +113,43 @@ export default class BatchJobMonitor extends LightningElement {
             .finally(() => {
                 this.syncing = false;
             });
+    }
+
+    handleAlertsToggle(event) {
+        const next = event.target.checked;
+        this.togglingAlerts = true;
+        setFailureAlertsEnabled({ enabled: next })
+            .then((saved) => {
+                this.alertsEnabled = saved;
+                if (this._alertsResult) {
+                    refreshApex(this._alertsResult);
+                }
+                this.dispatchEvent(new ShowToastEvent({
+                    title: saved ? 'Failure alerts on' : 'Failure alerts off',
+                    message: saved
+                        ? 'You will be notified when batch jobs fail.'
+                        : 'Failure notifications are silenced until you turn them back on.',
+                    variant: saved ? 'success' : 'info'
+                }));
+            })
+            .catch((error) => {
+                // Put the switch back where it was — the save did not land.
+                this.alertsEnabled = !next;
+                const msg = error && error.body && error.body.message
+                    ? error.body.message : 'Could not update the setting.';
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Toggle failed', message: msg, variant: 'error'
+                }));
+            })
+            .finally(() => {
+                this.togglingAlerts = false;
+            });
+    }
+
+    get alertsTooltip() {
+        return this.alertsEnabled
+            ? 'Failure alerts are ON — a bell/mobile notification is sent when jobs fail. Turn off to silence alerts (useful during a data load or migration).'
+            : 'Failure alerts are OFF — no notifications are sent when jobs fail. Turn on to be notified again.';
     }
 
     handleViewFailures() {

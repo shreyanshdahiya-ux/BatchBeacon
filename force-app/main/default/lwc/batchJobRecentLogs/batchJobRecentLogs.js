@@ -1,6 +1,7 @@
 import { LightningElement, api, track, wire } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import LightningConfirm from 'lightning/confirm';
 import getRecentLogs from '@salesforce/apex/BatchJobController.getRecentLogs';
 import abortJob from '@salesforce/apex/BatchJobController.abortJob';
 import abortJobs from '@salesforce/apex/BatchJobController.abortJobs';
@@ -243,8 +244,20 @@ export default class BatchJobRecentLogs extends LightningElement {
         this.bulkAbort(this.selectedAbortableIds, 'selected');
     }
 
-    handleAbortAllRunning() {
-        this.bulkAbort(this.runningIds, 'running');
+    async handleAbortAllRunning() {
+        const ids = this.runningIds;
+        if (ids.length === 0) {
+            this.toast('Nothing to abort', 'No running jobs to abort.', 'warning');
+            return;
+        }
+        const confirmed = await LightningConfirm.open({
+            message: `Abort all ${ids.length} running job(s)? This can't be undone.`,
+            theme: 'warning',
+            label: 'Abort all running jobs'
+        });
+        if (confirmed) {
+            this.bulkAbort(ids, 'running');
+        }
     }
 
     bulkAbort(ids, label) {
@@ -297,6 +310,11 @@ export default class BatchJobRecentLogs extends LightningElement {
                 })
                 .catch((e) => this.toast('Re-run failed', this.errMsg(e), 'error'));
         }
+    }
+
+    handleErrorClick() {
+        // Jump to Setup → Apex Jobs (the source of the failure) in a new tab.
+        this.openInNewTab('/lightning/setup/AsyncApexJobs/home');
     }
 
     openInNewTab(path) {

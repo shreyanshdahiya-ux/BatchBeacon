@@ -200,6 +200,31 @@ public with sharing class BatchJobController {
     }
 
     /**
+     * Current state of the failure-alert toggle shown in the dashboard header.
+     * Backed by a hierarchy custom setting, so this costs no SOQL.
+     */
+    @AuraEnabled(cacheable=true)
+    public static Boolean getFailureAlertsEnabled() {
+        return AlertService.alertsEnabled();
+    }
+
+    /**
+     * Flips the failure-alert toggle org-wide and returns the persisted value.
+     * Takes effect on the next tracker run.
+     */
+    @AuraEnabled
+    public static Boolean setFailureAlertsEnabled(Boolean enabled) {
+        if (enabled == null) {
+            throw new AuraHandledException('No value was provided for the failure alert toggle.');
+        }
+        try {
+            return AlertService.setAlertsEnabled(enabled);
+        } catch (Exception e) {
+            throw new AuraHandledException('Could not update the failure alert setting: ' + e.getMessage());
+        }
+    }
+
+    /**
      * Re-runs a batch/queueable class directly via Database.executeBatch / enqueueJob.
      * The class must have a public no-arg constructor. QueryLocator batches and
      * Queueables are supported; Iterable batches / @future methods are not.

@@ -166,6 +166,16 @@
     min-width: 0;
 }
 
+.fail-link {
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.fail-link:hover {
+    text-decoration: underline;
+    color: #d56e7c;
+}
+
 .fail-id {
     flex: 0 0 auto;
     font-family: "SF Mono", Consolas, monospace;
