@@ -80,7 +80,8 @@
                                     <!-- Card header -->
                                     <div class="card-head">
                                         <input type="checkbox" class="card-check" data-id={row.Id}
-                                            checked={row.selected} onchange={handleCardSelect} title="Select" />
+                                            checked={row.selected} disabled={row.notAbortable}
+                                            onchange={handleCardSelect} title={row.checkTitle} />
                                         <span class="status-pill" style={row.statusStyle}>{row.Status__c}</span>
                                         <span class="card-class slds-truncate" title={row.Job_Class_Name__c}>{row.Job_Class_Name__c}</span>
                                         <lightning-button-menu icon-name="utility:down" size="x-small"

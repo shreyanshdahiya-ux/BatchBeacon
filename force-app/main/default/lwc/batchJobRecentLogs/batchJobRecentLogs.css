@@ -43,6 +43,11 @@
     cursor: pointer;
 }
 
+.card-check:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
 .status-pill {
     flex: 0 0 auto;
 }

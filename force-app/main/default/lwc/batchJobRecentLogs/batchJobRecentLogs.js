@@ -162,6 +162,10 @@ export default class BatchJobRecentLogs extends LightningElement {
             hasErrors: (row.Error_Count__c || 0) > 0,
             errorClass: (row.Error_Count__c || 0) > 0 ? 'metric-val val-error' : 'metric-val',
             abortable: ABORTABLE.has(row.Status__c),
+            notAbortable: !ABORTABLE.has(row.Status__c),
+            checkTitle: ABORTABLE.has(row.Status__c)
+                ? 'Select to bulk-abort'
+                : 'Only running jobs can be selected',
             retryable: TERMINAL.has(row.Status__c) && RETRYABLE_TYPES.has(row.Job_Type__c),
             selected: this._selected.has(row.Id)
         };
@@ -208,6 +212,12 @@ export default class BatchJobRecentLogs extends LightningElement {
     // --- Selection --------------------------------------------------------
     handleCardSelect(event) {
         const id = event.target.dataset.id;
+        const row = this._data.find((r) => r.Id === id);
+        if (row && !ABORTABLE.has(row.Status__c)) {
+            // Only running jobs are selectable for bulk-abort.
+            event.target.checked = false;
+            return;
+        }
         if (event.target.checked) {
             this._selected.add(id);
         } else {
