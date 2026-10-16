@@ -3,6 +3,7 @@ import { loadScript } from 'lightning/platformResourceLoader';
 import { refreshApex } from '@salesforce/apex';
 import chartjs from '@salesforce/resourceUrl/chartjs';
 import getDailySummary from '@salesforce/apex/BatchJobController.getDailySummary';
+import { stripNamespace } from 'c/beaconUtils';
 
 const DAY_MS = 86400000;
 
@@ -61,7 +62,7 @@ export default class BatchJobTrendChart extends LightningElement {
         if (result.data) {
             this.error = undefined;
             this.loading = false;
-            this.compute(result.data);
+            this.compute(stripNamespace(result.data));
             this.renderChart();
         } else if (result.error) {
             this.error = result.error;

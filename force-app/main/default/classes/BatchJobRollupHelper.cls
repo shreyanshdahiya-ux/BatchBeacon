@@ -1,7 +1,7 @@
 /**
  * BatchJobRollupHelper
  * --------------------
- * Stateless aggregation utility for the ApexPulse batch monitor.
+ * Stateless aggregation utility for the Batch Beacon batch monitor.
  *
  * Given a list of AsyncApexJob rows it:
  *   - builds one Batch_Job_Log__c per execution,
@@ -23,6 +23,8 @@ public with sharing class BatchJobRollupHelper {
     private static final Set<String> EXCLUDED_CLASSES = new Set<String>{
         'BatchJobTrackerScheduled', 'BatchJobLogPurgeScheduled'
     };
+    /** Namespace those excluded classes live under (empty when not packaged). */
+    private static final String OWN_NAMESPACE = BeaconNamespace.current();
 
     /**
      * Called from the scheduled tracker (system context, no end user). The log /
@@ -48,7 +50,12 @@ public with sharing class BatchJobRollupHelper {
                 ? j.ApexClass.Name
                 : 'Unknown';
             // Skip Batch Beacon's own scheduled jobs so it doesn't monitor itself.
-            if (EXCLUDED_CLASSES.contains(className)) {
+            // Match the namespace too, so a subscriber class that happens to share
+            // a name with ours is not skipped.
+            String classNamespace = (j.ApexClass != null && j.ApexClass.NamespacePrefix != null)
+                ? j.ApexClass.NamespacePrefix
+                : '';
+            if (EXCLUDED_CLASSES.contains(className) && classNamespace == OWN_NAMESPACE) {
                 continue;
             }
             Date bucket = (j.CreatedDate != null)

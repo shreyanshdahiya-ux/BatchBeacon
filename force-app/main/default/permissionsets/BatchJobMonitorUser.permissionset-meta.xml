@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
     <label>Batch Job Monitor User</label>
-    <description>Grants read access to the ApexPulse batch monitor objects and dashboard controller.</description>
+    <description>Grants read access to the Batch Beacon objects and dashboard controller.</description>
     <hasActivationRequired>false</hasActivationRequired>
 
+    <tabSettings>
+        <tab>Job_Monitor</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
     <tabSettings>
         <tab>Recent_Batch_Job_Logs</tab>
         <visibility>Visible</visibility>
@@ -50,7 +54,7 @@
     </objectPermissions>
 
     <!-- Status event: Read grants empApi subscribe rights. Publish is done by
-         Apex in system context (§10), so Create is not granted to dashboard users. -->
+         Apex in system context , so Create is not granted to dashboard users. -->
     <objectPermissions>
         <object>Batch_Job_Update__e</object>
         <allowRead>true</allowRead>
@@ -177,17 +181,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <field>Daily_Job_Summary__c.Last_Updated__c</field>
-        <readable>true</readable>
-        <editable>false</editable>
-    </fieldPermissions>
-
-    <fieldPermissions>
-        <field>Batch_Job_Update__e.Total_Jobs__c</field>
-        <readable>true</readable>
-        <editable>false</editable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <field>Batch_Job_Update__e.Publish_Time__c</field>
         <readable>true</readable>
         <editable>false</editable>
     </fieldPermissions>

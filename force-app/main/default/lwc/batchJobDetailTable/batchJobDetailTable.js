@@ -1,6 +1,7 @@
 import { LightningElement, api, track, wire } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
 import getJobRunCounts from '@salesforce/apex/BatchJobController.getJobRunCounts';
+import { stripNamespace } from 'c/beaconUtils';
 
 const PILL = 'display:inline-block;padding:2px 9px;border-radius:11px;font-size:11px;font-weight:700;line-height:1.4;';
 
@@ -61,7 +62,7 @@ export default class BatchJobDetailTable extends LightningElement {
         if (result.data) {
             this.error = undefined;
             this.loading = false;
-            this._data = result.data.map((r) => this.decorate(r));
+            this._data = stripNamespace(result.data).map((r) => this.decorate(r));
             this.applyView();
         } else if (result.error) {
             this.error = result.error;

@@ -111,8 +111,10 @@ private class BatchJobControllerTest {
         );
 
         Test.startTest();
-        BatchJobController.abortJob(cronId);
+        Integer abortedCount = BatchJobController.abortJob(cronId);
         Test.stopTest();
+
+        System.assertEquals(1, abortedCount, 'abortJob should report the one job it aborted.');
 
         System.assertEquals('Aborted',
             [SELECT Status__c FROM Batch_Job_Log__c WHERE Async_Job_Id__c = :cronId LIMIT 1].Status__c,
@@ -151,6 +153,16 @@ private class BatchJobControllerTest {
             threw = true;
         }
         System.assert(threw, 'Empty list should raise AuraHandledException');
+    }
+
+    @isTest
+    static void getRerunnableClassesReturnsOnlyResolvableNames() {
+        List<String> found = BatchJobController.getRerunnableClasses(
+            new List<String>{ 'BatchJobControllerTest.RetryStub', 'NoSuchClass_xyz', '', null }
+        );
+        System.assertEquals(1, found.size(), 'Only the class that can be looked up should come back.');
+        System.assertEquals('BatchJobControllerTest.RetryStub', found[0]);
+        System.assertEquals(0, BatchJobController.getRerunnableClasses(null).size(), 'Null input gives an empty list.');
     }
 
     @isTest

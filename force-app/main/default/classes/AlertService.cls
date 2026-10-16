@@ -37,6 +37,7 @@ public with sharing class AlertService {
      * Entry point. Never throws — a notification problem must not break job
      * ingestion, which is the tracker's primary duty.
      */
+    /* sfge-disable-stack ApexFlsViolationRule */
     public static void runAlerts() {
         if (!alertsEnabled()) {
             return;
@@ -49,21 +50,31 @@ public with sharing class AlertService {
     }
 
     /**
-     * Reads the dashboard toggle. Hierarchy custom settings come from the
-     * application cache, so this costs no SOQL — which matters inside the
-     * tracker's tight query budget.
+     * Reads the dashboard toggle from the Batch_Beacon_Config__c custom setting.
      *
-     * An org with no config row yet is treated as enabled, matching the field's
-     * default. Note getOrgDefaults() does NOT return null in that case — it
-     * returns an empty instance whose checkbox reads false — so the absence of
-     * a row must be detected by the missing Id, not by a null field.
+     * The setting is resolved at runtime (see configRef()) instead of by a
+     * compile-time reference, so this class has no hard dependency on it: it works
+     * whether the setting ships with the package (namespaced) or was created
+     * directly in the subscriber org, and falls back to "enabled" when the setting,
+     * its field or its org-default row does not exist.
+     *
+     * Costs 1 SOQL query (dynamic SOQL cannot call getOrgDefaults()).
      */
+    /* sfge-disable-stack ApexFlsViolationRule */
     public static Boolean alertsEnabled() {
-        Batch_Beacon_Config__c cfg = Batch_Beacon_Config__c.getOrgDefaults();
-        if (cfg == null || cfg.Id == null) {
+        ConfigRef ref = configRef();
+        if (ref == null) {
             return true;
         }
-        return cfg.Failure_Alerts_Enabled__c == true;
+        SObject row = orgDefaultRow(ref);
+        if (row == null) {
+            return true;
+        }
+        Map<String, Object> populated = row.getPopulatedFieldsAsMap();
+        if (!populated.containsKey(ref.fieldName)) {
+            return true; // the user cannot read the toggle, so fall back to the default
+        }
+        return (Boolean) populated.get(ref.fieldName) == true;
     }
 
     /**
@@ -80,13 +91,111 @@ public with sharing class AlertService {
     @SuppressWarnings('PMD.ApexCRUDViolation')
     public static Boolean setAlertsEnabled(Boolean enabled) {
         Boolean target = (enabled == true);
-        Batch_Beacon_Config__c cfg = Batch_Beacon_Config__c.getOrgDefaults();
-        if (cfg == null || cfg.Id == null) {
-            cfg = new Batch_Beacon_Config__c(SetupOwnerId = UserInfo.getOrganizationId());
+        ConfigRef ref = configRef();
+        if (ref == null) {
+            throw new AlertException(
+                'The Batch Beacon config custom setting (' + CONFIG_OBJECT + ') was not found in this org.'
+            );
         }
-        cfg.Failure_Alerts_Enabled__c = target;
+        SObject cfg = orgDefaultRow(ref);
+        if (cfg == null) {
+            cfg = ref.sObjectType.newSObject();
+            cfg.put('SetupOwnerId', UserInfo.getOrganizationId());
+        }
+        cfg.put(ref.fieldName, target);
         upsert cfg;
         return target;
+    }
+
+    /** API names of the config custom setting and its toggle field, without any namespace. */
+    @TestVisible
+    private static final String CONFIG_OBJECT = 'Batch_Beacon_Config__c';
+    @TestVisible
+    private static final String CONFIG_FIELD = 'Failure_Alerts_Enabled__c';
+
+    /** Resolved config object + toggle field for this org. */
+    private class ConfigRef {
+        String objectName;
+        String fieldName;
+        Schema.SObjectType sObjectType;
+    }
+
+    private static ConfigRef cachedConfigRef;
+    private static Boolean configRefResolved = false;
+
+    /**
+     * Finds the config custom setting by name at runtime. Tries the package
+     * namespace first (when packaged), then the plain name, so it also finds a
+     * setting created directly in a subscriber org. The toggle field is matched
+     * by suffix so its own namespace prefix, if any, never has to be known.
+     * Returns null when the setting or field does not exist.
+     */
+    private static ConfigRef configRef() {
+        if (configRefResolved) {
+            return cachedConfigRef;
+        }
+        configRefResolved = true;
+        ConfigRef ref = null;
+        String ns = BeaconNamespace.current();
+        if (String.isNotBlank(ns)) {
+            ref = resolveConfig(ns, CONFIG_OBJECT); // shipped with the package
+        }
+        if (ref == null) {
+            ref = resolveConfig('', CONFIG_OBJECT); // created directly in the subscriber org
+        }
+        cachedConfigRef = ref;
+        return ref;
+    }
+
+    /**
+     * Resolves one candidate object name (empty namespace means the org default
+     * namespace) and locates the toggle field with a single describe. Null if the
+     * object or the field is missing.
+     */
+    private static ConfigRef resolveConfig(String nsPrefix, String objectName) {
+        Type t = Type.forName(nsPrefix, objectName);
+        if (t == null) {
+            return null;
+        }
+        Schema.DescribeSObjectResult described;
+        try {
+            described = ((SObject) t.newInstance()).getSObjectType().getDescribe();
+        } catch (Exception e) {
+            return null; // the name is not an SObject
+        }
+        String suffix = CONFIG_FIELD.toLowerCase();
+        Map<String, Schema.SObjectField> fields = described.fields.getMap();
+        for (String key : fields.keySet()) {
+            if (key == suffix || key.endsWith('__' + suffix)) {
+                ConfigRef ref = new ConfigRef();
+                ref.objectName = described.getName();
+                ref.fieldName = fields.get(key).getDescribe().getName();
+                ref.sObjectType = described.getSObjectType();
+                return ref;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The org-default config row, or null when none exists yet. The object and
+     * field names come from describe results (never from user input), so the
+     * dynamic SOQL is not injectable; system context, nothing to FLS-gate.
+     */
+    /* sfge-disable-stack ApexFlsViolationRule */
+    @SuppressWarnings('PMD.ApexCRUDViolation,PMD.ApexSOQLInjection')
+    private static SObject orgDefaultRow(ConfigRef ref) {
+        Id orgId = UserInfo.getOrganizationId();
+        List<SObject> rows = Database.query(
+            'SELECT Id, ' + ref.fieldName + ' FROM ' + ref.objectName + ' WHERE SetupOwnerId = :orgId LIMIT 1'
+        );
+        if (rows.isEmpty()) {
+            return null;
+        }
+        // Drop anything the running user cannot read. The Id always survives, so a
+        // caller can still update the row; an unreadable toggle reads as absent.
+        List<SObject> readable = Security.stripInaccessible(AccessType.READABLE, rows).getRecords();
+        return readable.isEmpty() ? null : readable[0];
     }
 
     /**
@@ -183,10 +292,12 @@ public with sharing class AlertService {
             return mockRecipients;
         }
         Set<String> ids = new Set<String>();
+        String ownNamespace = BeaconNamespace.currentOrNull();
         for (PermissionSetAssignment psa : [
             SELECT AssigneeId
             FROM PermissionSetAssignment
             WHERE PermissionSet.Name = :RECIPIENT_PERM_SET
+              AND PermissionSet.NamespacePrefix = :ownNamespace
               AND Assignee.IsActive = true
             LIMIT 500
         ]) {
@@ -203,10 +314,12 @@ public with sharing class AlertService {
     /* sfge-disable-stack ApexFlsViolationRule */
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private static Id notificationTypeId() {
+        String ownNamespace = BeaconNamespace.currentOrNull();
         List<CustomNotificationType> types = [
             SELECT Id
             FROM CustomNotificationType
             WHERE DeveloperName = :NOTIFICATION_TYPE
+              AND NamespacePrefix = :ownNamespace
             LIMIT 1
         ];
         if (types.isEmpty()) {

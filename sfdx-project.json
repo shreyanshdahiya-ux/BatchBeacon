@@ -6,7 +6,7 @@
     }
   ],
   "name": "BatchBeacon",
-  "namespace": "",
+  "namespace": "batchbeacon",
   "sfdcLoginUrl": "https://login.salesforce.com",
   "sourceApiVersion": "66.0"
 }

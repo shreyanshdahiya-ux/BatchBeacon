@@ -6,8 +6,13 @@ import getRecentLogs from '@salesforce/apex/BatchJobController.getRecentLogs';
 import abortJob from '@salesforce/apex/BatchJobController.abortJob';
 import abortJobs from '@salesforce/apex/BatchJobController.abortJobs';
 import retryJob from '@salesforce/apex/BatchJobController.retryJob';
+import getRerunnableClasses from '@salesforce/apex/BatchJobController.getRerunnableClasses';
+import { stripNamespace } from 'c/beaconUtils';
 
 const ABORTABLE = new Set(['Queued', 'Processing', 'Holding', 'Preparing']);
+// A Scheduled Apex row in Queued status is a schedule waiting to fire, not running work,
+// so it is never offered for abort.
+const isAbortable = (row) => ABORTABLE.has(row.Status__c) && row.Job_Type__c !== 'ScheduledApex';
 const TERMINAL = new Set(['Completed', 'Failed', 'Aborted']);
 const RETRYABLE_TYPES = new Set(['BatchApex', 'Queueable']);
 const TYPE_LABELS = {
@@ -64,6 +69,10 @@ export default class BatchJobRecentLogs extends LightningElement {
     error;
 
     _data = [];
+    _raw = [];
+    // Re-run is only offered for classes the package can actually look up (global ones).
+    _rerunnable = new Set();
+    _checked = new Set();
     _selected = new Set();
     _result;
     _refreshtick = 0;
@@ -94,6 +103,11 @@ export default class BatchJobRecentLogs extends LightningElement {
             { label: 'Failed / Aborted', value: 'Failed' },
             { label: 'Running', value: 'Running' }
         ];
+    }
+
+    // The combobox options use string values, so its selected value must be a string too.
+    get limitValue() {
+        return String(this.limitN);
     }
 
     get limitOptions() {
@@ -135,12 +149,45 @@ export default class BatchJobRecentLogs extends LightningElement {
         if (result.data) {
             this.error = undefined;
             this.loading = false;
-            this._data = result.data.map((r) => this.decorate(r));
+            this._raw = stripNamespace(result.data);
+            this._data = this._raw.map((r) => this.decorate(r));
             this.applyView();
+            this.checkRerunnable();
         } else if (result.error) {
             this.error = result.error;
             this.loading = false;
         }
+    }
+
+    canRetryType(row) {
+        return TERMINAL.has(row.Status__c) && RETRYABLE_TYPES.has(row.Job_Type__c);
+    }
+
+    // Asks Apex which finished batch/queueable classes can be re-run, once per class name.
+    checkRerunnable() {
+        const names = [
+            ...new Set(
+                this._raw
+                    .filter((r) => this.canRetryType(r) && r.Job_Class_Name__c && !this._checked.has(r.Job_Class_Name__c))
+                    .map((r) => r.Job_Class_Name__c)
+            )
+        ];
+        if (!names.length) {
+            return;
+        }
+        getRerunnableClasses({ classNames: names })
+            .then((found) => {
+                found.forEach((n) => this._rerunnable.add(n));
+            })
+            .catch(() => {
+                // If the check itself fails, offer Re-run anyway; the server explains on click.
+                names.forEach((n) => this._rerunnable.add(n));
+            })
+            .finally(() => {
+                names.forEach((n) => this._checked.add(n));
+                this._data = this._raw.map((r) => this.decorate(r));
+                this.applyView();
+            });
     }
 
     decorate(row) {
@@ -161,12 +208,13 @@ export default class BatchJobRecentLogs extends LightningElement {
             hasFailure: !!row.Failure_Reason__c,
             hasErrors: (row.Error_Count__c || 0) > 0,
             errorClass: (row.Error_Count__c || 0) > 0 ? 'metric-val val-error' : 'metric-val',
-            abortable: ABORTABLE.has(row.Status__c),
-            notAbortable: !ABORTABLE.has(row.Status__c),
-            checkTitle: ABORTABLE.has(row.Status__c)
+            abortable: isAbortable(row),
+            notAbortable: !isAbortable(row),
+            checkTitle: isAbortable(row)
                 ? 'Select to bulk-abort'
                 : 'Only running jobs can be selected',
-            retryable: TERMINAL.has(row.Status__c) && RETRYABLE_TYPES.has(row.Job_Type__c),
+            retryable: this.canRetryType(row) && this._rerunnable.has(row.Job_Class_Name__c),
+            retryBlocked: this.canRetryType(row) && this._checked.has(row.Job_Class_Name__c) && !this._rerunnable.has(row.Job_Class_Name__c),
             selected: this._selected.has(row.Id)
         };
     }
@@ -213,7 +261,7 @@ export default class BatchJobRecentLogs extends LightningElement {
     handleCardSelect(event) {
         const id = event.target.dataset.id;
         const row = this._data.find((r) => r.Id === id);
-        if (row && !ABORTABLE.has(row.Status__c)) {
+        if (row && !isAbortable(row)) {
             // Only running jobs are selectable for bulk-abort.
             event.target.checked = false;
             return;
@@ -228,7 +276,7 @@ export default class BatchJobRecentLogs extends LightningElement {
 
     get selectedAbortableIds() {
         return this._data
-            .filter((r) => this._selected.has(r.Id) && ABORTABLE.has(r.Status__c) && r.Async_Job_Id__c)
+            .filter((r) => this._selected.has(r.Id) && isAbortable(r) && r.Async_Job_Id__c)
             .map((r) => r.Async_Job_Id__c);
     }
 
@@ -242,7 +290,7 @@ export default class BatchJobRecentLogs extends LightningElement {
 
     get runningIds() {
         return this._data
-            .filter((r) => ABORTABLE.has(r.Status__c) && r.Async_Job_Id__c)
+            .filter((r) => isAbortable(r) && r.Async_Job_Id__c)
             .map((r) => r.Async_Job_Id__c);
     }
 
@@ -276,8 +324,14 @@ export default class BatchJobRecentLogs extends LightningElement {
             return;
         }
         abortJobs({ jobIds: ids })
-            .then(() => {
-                this.toast('Jobs aborted', `${ids.length} ${label} job(s) aborted.`, 'success');
+            .then((count) => {
+                const skipped = ids.length - count;
+                const note = skipped > 0 ? ` ${skipped} skipped: already finished or a schedule waiting to run.` : '';
+                this.toast(
+                    'Jobs aborted',
+                    `${count} of ${ids.length} ${label} job(s) aborted.${note}`,
+                    count > 0 ? 'success' : 'warning'
+                );
                 this._selected.clear();
                 this.refresh();
             })
@@ -307,8 +361,12 @@ export default class BatchJobRecentLogs extends LightningElement {
                 return;
             }
             abortJob({ jobId: row.Async_Job_Id__c })
-                .then(() => {
-                    this.toast('Job aborted', `${row.Job_Class_Name__c || 'Job'} was aborted.`, 'success');
+                .then((count) => {
+                    this.toast(
+                        count > 0 ? 'Job aborted' : 'Nothing aborted',
+                        count > 0 ? `${row.Job_Class_Name__c || 'Job'} was aborted.` : 'The job had already finished.',
+                        count > 0 ? 'success' : 'warning'
+                    );
                     this.refresh();
                 })
                 .catch((e) => this.toast('Abort failed', this.errMsg(e), 'error'));

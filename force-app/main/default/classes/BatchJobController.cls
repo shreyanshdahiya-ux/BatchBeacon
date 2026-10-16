@@ -121,26 +121,37 @@ public with sharing class BatchJobController {
      * a failure (job already finished / invalid Id) surfaces immediately to the UI.
      */
     @AuraEnabled
-    public static void abortJob(String jobId) {
+    public static Integer abortJob(String jobId) {
         if (String.isBlank(jobId)) {
             throw new AuraHandledException('No job Id was provided to abort.');
         }
-        abortInternal(new List<String>{ jobId });
+        return abortInternal(new List<String>{ jobId });
     }
 
-    /** Bulk variant — aborts every Id that is still abortable. */
+    /**
+     * Bulk variant. Aborts every Id that is still abortable and returns how many
+     * were actually aborted, which can be fewer than were requested: jobs that
+     * already finished and scheduled jobs waiting to fire are left alone.
+     */
     @AuraEnabled
-    public static void abortJobs(List<String> jobIds) {
+    public static Integer abortJobs(List<String> jobIds) {
         if (jobIds == null || jobIds.isEmpty()) {
             throw new AuraHandledException('No jobs were selected to abort.');
         }
-        abortInternal(jobIds);
+        return abortInternal(jobIds);
     }
 
-    private static void abortInternal(List<String> jobIds) {
+    private static Integer abortInternal(List<String> jobIds) {
+        Map<String, AsyncApexJob> known = lookupJobs(jobIds);
         Set<String> aborted = new Set<String>();
         for (String jobId : jobIds) {
             if (String.isBlank(jobId)) {
+                continue;
+            }
+            // Only skip a job we can see is not abortable. An Id that is not an
+            // AsyncApexJob row (for example a scheduled job trigger Id) is still tried.
+            AsyncApexJob job = known.get(idKey(jobId));
+            if (job != null && !isAbortable(job)) {
                 continue;
             }
             try {
@@ -157,6 +168,48 @@ public with sharing class BatchJobController {
             );
         }
         markAborted(aborted);
+        return aborted.size();
+    }
+
+    /** A job that is queued or running. A ScheduledApex row only waits for its schedule to fire. */
+    private static Boolean isAbortable(AsyncApexJob job) {
+        return job.JobType != 'ScheduledApex'
+            && (job.Status == 'Queued' || job.Status == 'Processing'
+                || job.Status == 'Holding' || job.Status == 'Preparing');
+    }
+
+    /** 15 character key, so 15 and 18 character Ids compare equal. */
+    private static String idKey(String jobId) {
+        return jobId.length() > 15 ? jobId.substring(0, 15) : jobId;
+    }
+
+    /**
+     * Current state of the requested jobs. Reads AsyncApexJob (a system object) in
+     * system context; there is no end user to FLS-gate, so the analyzer finding is
+     * intentionally suppressed, matching BatchJobTrackerScheduled.queryRecentJobs().
+     */
+    /* sfge-disable-stack ApexFlsViolationRule */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    private static Map<String, AsyncApexJob> lookupJobs(List<String> jobIds) {
+        Set<Id> ids = new Set<Id>();
+        for (String jobId : jobIds) {
+            if (String.isBlank(jobId)) {
+                continue;
+            }
+            try {
+                ids.add((Id) jobId);
+            } catch (Exception e) {
+                // Not a valid Id: abortJob rejects it below.
+            }
+        }
+        Map<String, AsyncApexJob> byKey = new Map<String, AsyncApexJob>();
+        if (ids.isEmpty()) {
+            return byKey;
+        }
+        for (AsyncApexJob job : [SELECT Id, Status, JobType FROM AsyncApexJob WHERE Id IN :ids]) {
+            byKey.put(idKey(String.valueOf(job.Id)), job);
+        }
+        return byKey;
     }
 
     /**
@@ -203,6 +256,7 @@ public with sharing class BatchJobController {
      * Current state of the failure-alert toggle shown in the dashboard header.
      * Backed by a hierarchy custom setting, so this costs no SOQL.
      */
+    /* sfge-disable-stack ApexFlsViolationRule */
     @AuraEnabled(cacheable=true)
     public static Boolean getFailureAlertsEnabled() {
         return AlertService.alertsEnabled();
@@ -225,18 +279,55 @@ public with sharing class BatchJobController {
     }
 
     /**
+     * Which of the given job classes this package can actually look up, and so
+     * re-run. The dashboard uses it to offer Re-run only where it can work: a
+     * class that is not global is invisible to the package namespace.
+     * Does not instantiate anything, so no constructor code runs.
+     */
+    @AuraEnabled
+    public static List<String> getRerunnableClasses(List<String> classNames) {
+        List<String> found = new List<String>();
+        if (classNames == null) {
+            return found;
+        }
+        for (String name : new Set<String>(classNames)) {
+            if (String.isNotBlank(name) && resolveType(name) != null) {
+                found.add(name);
+            }
+        }
+        return found;
+    }
+
+    /**
+     * Monitored classes live in the subscriber org's default namespace, so look
+     * there first (an explicit empty namespace) before the caller-relative lookup.
+     */
+    private static Type resolveType(String className) {
+        Type t = Type.forName('', className);
+        return (t != null) ? t : Type.forName(className);
+    }
+
+    /**
      * Re-runs a batch/queueable class directly via Database.executeBatch / enqueueJob.
-     * The class must have a public no-arg constructor. QueryLocator batches and
+     * The class must have a no-arg constructor. QueryLocator batches and
      * Queueables are supported; Iterable batches / @future methods are not.
+     *
+     * Batch Beacon runs under its own package namespace, and Apex hides a class
+     * that is public (visible only inside its own namespace) from other namespaces.
+     * So from an installed package only a GLOBAL class with a global no-arg
+     * constructor can be looked up and re-run; anything else is reported as not found.
      */
     @AuraEnabled
     public static void retryJob(String className, String jobType) {
         if (String.isBlank(className)) {
             throw new AuraHandledException('No class name was provided to retry.');
         }
-        Type t = Type.forName(className);
+        Type t = resolveType(className);
         if (t == null) {
-            throw new AuraHandledException('Apex class not found: ' + className);
+            throw new AuraHandledException(
+                'Could not find ' + className + ' to re-run. From Batch Beacon a job can only be re-run when its Apex class '
+                + 'is declared global, has a global constructor with no parameters, and still exists in this org.'
+            );
         }
         try {
             Object instance = t.newInstance();

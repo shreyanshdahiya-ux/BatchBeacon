@@ -1,7 +1,7 @@
 /**
  * BatchJobTrackerScheduled
  * ------------------------
- * The heartbeat of ApexPulse. Scheduled four times an hour (:00/:15/:30/:45).
+ * The heartbeat of Batch Beacon. Scheduled four times an hour (:00/:15/:30/:45).
  *
  * Each run queries AsyncApexJob for BatchApex executions in the last 24 hours
  * (1 SOQL, capped at 2,000 rows) and delegates all aggregation + DML to
@@ -47,7 +47,7 @@ global with sharing class BatchJobTrackerScheduled implements Schedulable {
     @SuppressWarnings('PMD.ApexCRUDViolation')
     private static List<AsyncApexJob> queryRecentJobs() {
         return [
-            SELECT Id, ApexClass.Name, Status, JobType,
+            SELECT Id, ApexClass.Name, ApexClass.NamespacePrefix, Status, JobType,
                    CreatedDate, CompletedDate,
                    JobItemsProcessed, TotalJobItems, NumberOfErrors,
                    ExtendedStatus

@@ -1,6 +1,7 @@
 import { LightningElement, api, wire } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
 import getDailySummary from '@salesforce/apex/BatchJobController.getDailySummary';
+import { stripNamespace } from 'c/beaconUtils';
 
 export default class BatchJobInsights extends LightningElement {
     timeValue = '30';
@@ -51,7 +52,7 @@ export default class BatchJobInsights extends LightningElement {
         if (result.data) {
             this.error = undefined;
             this.loading = false;
-            this.compute(result.data);
+            this.compute(stripNamespace(result.data));
         } else if (result.error) {
             this.error = result.error;
             this.loading = false;

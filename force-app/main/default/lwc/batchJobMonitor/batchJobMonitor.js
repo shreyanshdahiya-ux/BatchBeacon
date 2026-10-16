@@ -6,8 +6,13 @@ import getLast24HourBreakdown from '@salesforce/apex/BatchJobController.getLast2
 import syncNow from '@salesforce/apex/BatchJobController.syncNow';
 import getFailureAlertsEnabled from '@salesforce/apex/BatchJobController.getFailureAlertsEnabled';
 import setFailureAlertsEnabled from '@salesforce/apex/BatchJobController.setFailureAlertsEnabled';
+import BATCH_JOB_LOG from '@salesforce/schema/Batch_Job_Log__c';
 
-const CHANNEL = '/event/Batch_Job_Update__e';
+// Platform events cannot be schema imported, so take the namespace prefix from a
+// custom object instead: 'batchbeacon__Batch_Job_Log__c' gives 'batchbeacon__', and
+// an un-namespaced org gives ''.
+const NAMESPACE_PREFIX = BATCH_JOB_LOG.objectApiName.replace('Batch_Job_Log__c', '');
+const CHANNEL = `/event/${NAMESPACE_PREFIX}Batch_Job_Update__e`;
 
 export default class BatchJobMonitor extends LightningElement {
     refreshTick = 0;

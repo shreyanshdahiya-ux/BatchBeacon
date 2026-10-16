@@ -52,10 +52,14 @@ private class AlertServiceTest {
 
     @isTest
     static void setAlertsEnabledCreatesOrgDefaultOnFirstUse() {
+        System.assertEquals(true, AlertService.alertsEnabled(), 'No row yet, so alerts default to on.');
         AlertService.setAlertsEnabled(false);
-        Batch_Beacon_Config__c cfg = Batch_Beacon_Config__c.getOrgDefaults();
-        System.assertNotEquals(null, cfg, 'An org-default config row should exist after the first write.');
-        System.assertNotEquals(null, cfg.Id, 'The org-default row should be persisted, not in-memory only.');
+        // alertsEnabled() re-queries the org-default row, so reading false proves the
+        // first write created and persisted it (the setting is resolved dynamically,
+        // so this test needs no compile-time reference to it either).
+        System.assertEquals(false, AlertService.alertsEnabled(), 'The org-default row should be persisted.');
+        AlertService.setAlertsEnabled(true);
+        System.assertEquals(true, AlertService.alertsEnabled(), 'A second write should update the same row.');
     }
 
     // --- Sending + dedup --------------------------------------------------

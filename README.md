@@ -2,16 +2,29 @@
 
 **A self-contained Lightning app that monitors every asynchronous Apex job in a Salesforce org.**
 
-Batch Beacon records each execution of `BatchApex`, `Queueable`, `ScheduledApex` and `Future` jobs, rolls them up per day and per class, and shows live KPIs, trends, insights and operational controls on one dashboard. It has no external dependencies: no CDN, no callouts and no managed package. It is built to run inside Developer Edition governor limits.
+Batch Beacon records each execution of `BatchApex`, `Queueable`, `ScheduledApex` and `Future` jobs, rolls them up per day and per class, and shows live KPIs, trends, insights and operational controls on one dashboard. It has no external dependencies: no CDN, no callouts and no dependency on any other package. It is built to run inside Developer Edition governor limits.
 
 | | |
 |---|---|
 | Source API version | 66.0 |
-| Package directory | `force-app` (unlocked/source format, no namespace) |
+| Namespace | `batchbeacon` |
+| Package type | Managed package (1GP), version 1.0 (Spring 2026), released |
+| Package directory | `force-app` |
 | Main app | **Batch Beacon** (`Batch_Beacon`) |
 | Permission set | `BatchJobMonitorUser` |
 
-> Naming note: the project was originally called ApexPulse. A few comments and the permission set description still use that name. It is the same product.
+## Installation
+
+[![Install Batch Beacon 1.0](https://img.shields.io/badge/Install-Batch%20Beacon%201.0-0B5CAB?style=for-the-badge&logo=salesforce&logoColor=white)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000cpvx)
+
+| Where to install | Link |
+|---|---|
+| Production or Developer Edition | [https://login.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000cpvx](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000cpvx) |
+| Sandbox | [https://test.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000cpvx](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tfj000000cpvx) |
+
+This is **Batch Beacon 1.0 (Spring 2026)**, a released first generation managed package. After installing, follow the [onboarding guide](docs/Batch_Beacon_Onboarding_Guide.docx): assign the permission set, create the custom setting, schedule the two jobs, then open the **Batch Beacon** app.
+
+Because the package is namespaced, its API names carry the `batchbeacon__` prefix (for example `batchbeacon__Batch_Job_Log__c`), and Apex classes are referenced as `batchbeacon.BatchJobTrackerScheduled`.
 
 ---
 
@@ -79,10 +92,10 @@ The tracker re-scans a rolling 24 hour window on every run. Both writes are `ups
 batchJobMonitor            parent: empApi subscription, health banner, Sync now, Refresh, alerts toggle
 |-- batchJobSummaryTile    24h KPI gauge with success rate ring
 |-- batchJobTrendChart     Chart.js stacked bars (bundled static resource)
-|-- batchJobDetailTable    per class counts for one date (uses beaconDatatable)
+|-- batchJobDetailTable    per class counts for one date
 |-- batchJobInsights       top failing and slowest leaderboards, sparkline
 '-- batchJobRecentLogs     recent executions, filters, abort and re-run
-beaconDatatable            lightning-datatable subclass adding a coloured `pill` cell type
+beaconUtils                shared helper: strips the package namespace from Apex field keys
 ```
 
 Live refresh contract: the parent increments `refreshtick` on every platform event, and each child reacts in an `@api set refreshtick` by calling `refreshApex()` on its stored wire result.
@@ -107,7 +120,7 @@ Rules worth knowing:
 - Status buckets: success is `Completed`; failure is `Failed` and `Aborted`; everything else (`Processing`, `Queued`, `Holding`, `Preparing`) is in progress.
 - `Failure_Alert_Sent__c` is written only by `AlertService`, so it survives re-ingestion.
 
-Full field tables are in [docs/Schema.md](docs/Schema.md).
+The field definitions are in the object metadata under `force-app/main/default/objects`.
 
 ---
 
@@ -116,7 +129,7 @@ Full field tables are in [docs/Schema.md](docs/Schema.md).
 ```
 force-app/main/default/
 |-- classes/              Apex: Tracker, RollupHelper, Controller, AlertService, LogPurge, and tests
-|-- lwc/                  batchJobMonitor, SummaryTile, TrendChart, DetailTable, RecentLogs, Insights, beaconDatatable
+|-- lwc/                  batchJobMonitor, SummaryTile, TrendChart, DetailTable, RecentLogs, Insights, beaconUtils
 |-- objects/              Batch_Job_Log__c, Daily_Job_Summary__c, Batch_Job_Update__e, Batch_Beacon_Config__c
 |-- applications/         Batch_Beacon app
 |-- tabs/                 Job_Monitor, Recent_Batch_Job_Logs, and two object tabs
@@ -125,8 +138,7 @@ force-app/main/default/
 |-- notificationtypes/    Batch_Job_Alert custom notification type
 '-- staticresources/      chartjs.js (bundled Chart.js, no CDN)
 
-scripts/apex/             generateDemoData, clearDemoData, scheduleJobs, unscheduleJobs, checkSchedules
-docs/                     Architecture, Schema, KT, QA test plan, test cases
+docs/                     Onboarding guide (Word) and the latest Code Analyzer report
 manifest/package.xml      Code types only (objects, tabs and layouts deploy from the source tree)
 ```
 
@@ -164,38 +176,45 @@ sf project deploy start -d force-app/main/default -o <org> --test-level RunLocal
 
 # 2. Grant access
 sf org assign permset -n BatchJobMonitorUser -o <org>
-
-# 3. Schedule the backend jobs (once, idempotent)
-sf apex run --file scripts/apex/scheduleJobs.apex -o <org>
-
-# 4. Optional: seed demo data (use the CLI, never the IDE Execute Anonymous box, which returns HTTP 431)
-sf apex run --file scripts/apex/generateDemoData.apex -o <org>
-
-# 5. Verify the schedules
-sf apex run --file scripts/apex/checkSchedules.apex -o <org>
 ```
+
+Then schedule the two background jobs once (see [Scheduled jobs](#scheduled-jobs) below).
 
 Then add the `batchJobMonitor` component to the **Job Monitor** tab's Lightning page in App Builder if it is not already there, open the **Batch Beacon** app, and hard refresh.
 
+### Configuration (custom setting)
+
+Batch Beacon reads one runtime option from a hierarchy custom setting named **Batch Beacon Config** (`Batch_Beacon_Config__c`). The package does not ship it, so create it in the org if you want the alerts on and off switch:
+
+1. Setup, Custom Settings, New. Label `Batch Beacon Config`, Object Name `Batch_Beacon_Config`, Setting Type Hierarchy, Visibility Public.
+2. Add a Checkbox field with the label `Failure Alerts Enabled` (Field Name `Failure_Alerts_Enabled`) and the default value Checked.
+3. Click Manage, then New to create the organization default value, set the checkbox and Save.
+
+| Field | Default | Purpose |
+|---|---|---|
+| `Failure_Alerts_Enabled__c` | On | Turns failure notifications on or off. Changed with the **Failure alerts** toggle in the dashboard header, or from Setup. |
+
+- The names must match exactly. `AlertService` finds the setting by name at runtime, so it works whether or not the org has a namespace.
+- If the setting does not exist, or has no row, alerts are treated as **enabled**. Without the setting, the header toggle cannot save a change.
+- It is read and written by `AlertService` in system context, so it needs no permission set entry. Any user with access to the dashboard can flip the header toggle.
+
 ### Scheduled jobs
 
-| Job name | Cron | Class |
+Run this once in Execute Anonymous. In a packaged install the classes carry the `batchbeacon.` prefix. In a source deployment, drop the prefix.
+
+```apex
+System.schedule('Batch Beacon Tracker', '0 0/15 * * * ?', new batchbeacon.BatchJobTrackerScheduled());
+System.schedule('Batch Beacon Purge', '0 0 2 * * ?', new batchbeacon.BatchJobLogPurgeScheduled());
+```
+
+| Job | Cron | Class |
 |---|---|---|
-| Batch Beacon Tracker 00 | `0 0 * * * ?` | `BatchJobTrackerScheduled` |
-| Batch Beacon Tracker 15 | `0 15 * * * ?` | `BatchJobTrackerScheduled` |
-| Batch Beacon Tracker 30 | `0 30 * * * ?` | `BatchJobTrackerScheduled` |
-| Batch Beacon Tracker 45 | `0 45 * * * ?` | `BatchJobTrackerScheduled` |
-| Batch Beacon Purge | `0 0 2 * * ?` | `BatchJobLogPurgeScheduled` |
+| Batch Beacon Tracker | `0 0/15 * * * ?` (every 15 minutes) | `BatchJobTrackerScheduled` |
+| Batch Beacon Purge | `0 0 2 * * ?` (nightly at 2:00 AM) | `BatchJobLogPurgeScheduled` |
 
-This uses all 5 Developer Edition scheduled job slots. Consolidating the trackers into a single cron entry frees 3.
+Times follow the time zone of the user who schedules the jobs. This uses 2 scheduled job slots.
 
-> **Redeploy caveat:** before deploying changes to `BatchJobTrackerScheduled` or `BatchJobLogPurgeScheduled`, run `scripts/apex/unscheduleJobs.apex`, deploy, then run `scheduleJobs.apex` again. Otherwise the deploy fails with "class has scheduled jobs".
-
-### Demo data
-
-`generateDemoData.apex` builds about 245 in-memory jobs and runs them through the real rollup pipeline, so logs, summaries and the platform event behave exactly as in a live run. Demo rows use fabricated job Ids, so **Abort and Re-run fail on demo rows by design**. To test those, run a real batch or queueable and click **Sync now**.
-
-`clearDemoData.apex` deletes **every** row in both custom objects, not only generated data.
+> **Redeploy caveat:** before deploying changes to `BatchJobTrackerScheduled` or `BatchJobLogPurgeScheduled`, delete the Batch Beacon entries under Setup, Scheduled Jobs, deploy, then schedule them again. Otherwise the deploy fails with "class has scheduled jobs".
 
 ---
 
@@ -239,7 +258,7 @@ npm run test:unit         # LWC Jest
 
 ## Known Limitations
 
-- `retryJob` supports only QueryLocator `BatchApex` and `Queueable` classes with a public no argument constructor. Iterable batches and `@future` methods cannot be re-run from the UI.
+- **Re-run** supports only QueryLocator `BatchApex` and `Queueable` classes. In an installed package the class must be declared `global` with a global constructor that takes no parameters. A `public` class is hidden from the package's namespace, so the app reports it as not found. The card menu checks this in advance: for a class it cannot run, it shows a disabled "Re-run unavailable (class is not global)" item instead of Re-run job. Iterable batches and `@future` methods cannot be re-run from the UI.
 - The tracker query is capped at 2,000 jobs per 24 hours.
 - No LWC Jest tests yet.
 - `getLast24HourTotal()` is legacy and unused.
@@ -250,11 +269,8 @@ npm run test:unit         # LWC Jest
 
 | Document | Contents |
 |---|---|
-| [docs/KT_Batch_Beacon.md](docs/KT_Batch_Beacon.md) | Full knowledge transfer: classes, API reference, runbook, troubleshooting, design decisions |
-| [docs/Architecture.md](docs/Architecture.md) | As built architecture |
-| [docs/Schema.md](docs/Schema.md) | Field reference |
-| [docs/QA_Test_Plan.md](docs/QA_Test_Plan.md) | Manual QA cases and regression smoke list |
-| [docs/TestCases.md](docs/TestCases.md) | Test case catalogue |
+| [docs/Batch_Beacon_Onboarding_Guide.docx](docs/Batch_Beacon_Onboarding_Guide.docx) | Step by step guide for admins: install, permission set, custom setting, scheduling, finding the app and how it shows data |
+| [docs/security-report.html](docs/security-report.html) | Latest Salesforce Code Analyzer report |
 
 ---
 

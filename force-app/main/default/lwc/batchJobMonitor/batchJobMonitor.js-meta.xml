@@ -3,7 +3,7 @@
     <apiVersion>66.0</apiVersion>
     <isExposed>true</isExposed>
     <masterLabel>Batch Job Monitor</masterLabel>
-    <description>ApexPulse dashboard: live batch job KPIs, daily trend chart and per-job run counts.</description>
+    <description>Batch Beacon dashboard: live batch job KPIs, daily trend chart and per-job run counts.</description>
     <targets>
         <target>lightning__AppPage</target>
         <target>lightning__HomePage</target>

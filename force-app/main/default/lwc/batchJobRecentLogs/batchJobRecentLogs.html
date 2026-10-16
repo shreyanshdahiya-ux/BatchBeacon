@@ -9,7 +9,7 @@
                 name="limit"
                 label="Show"
                 variant="label-hidden"
-                value={limitN}
+                value={limitValue}
                 options={limitOptions}
                 onchange={handleLimitChange}
             ></lightning-combobox>
@@ -92,6 +92,9 @@
                                             </template>
                                             <template lwc:if={row.retryable}>
                                                 <lightning-menu-item value="retry" label="Re-run job" prefix-icon-name="utility:refresh"></lightning-menu-item>
+                                            </template>
+                                            <template lwc:if={row.retryBlocked}>
+                                                <lightning-menu-item value="retryblocked" label="Re-run unavailable (class is not global)" prefix-icon-name="utility:refresh" disabled></lightning-menu-item>
                                             </template>
                                             <lightning-menu-item value="apexjobs" label="Apex Jobs" prefix-icon-name="utility:new_window"></lightning-menu-item>
                                             <lightning-menu-item value="apexclasses" label="Apex Classes" prefix-icon-name="utility:new_window"></lightning-menu-item>
